@@ -24,11 +24,11 @@ class AMCSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'customer', 'customer_id', 'reference_id', 'invoice_frequency', 'amc_type', 'amc_type_name',
             'payment_terms', 'payment_terms_name', 'start_date', 'end_date', 'uploads_files', 'equipment_no',
-            'notes', 'is_generate_contract', 'no_of_services'
+            'notes', 'is_generate_contract', 'no_of_services', 'price', 'no_of_lifts', 'gst_percentage', 'total'
         ]
 
     def validate(self, data):
-        # Rule 1: Start date must be today (07:11 PM +0530, July 27, 2025) or later
+        # Rule 1: Start date must be today (09:47 AM +0530, July 28, 2025) or later
         today = timezone.now().date()
         if 'start_date' in data and data['start_date']:
             if data['start_date'] < today:
@@ -49,6 +49,20 @@ class AMCSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({
                     "no_of_services": "Number of services must be greater than zero."
                 })
+
+        # Rule 4: Price and No of Lifts must be non-negative
+        if 'price' in data and data['price'] < 0:
+            raise serializers.ValidationError({
+                "price": "Price cannot be negative."
+            })
+        if 'no_of_lifts' in data and data['no_of_lifts'] < 0:
+            raise serializers.ValidationError({
+                "no_of_lifts": "Number of lifts cannot be negative."
+            })
+        if 'gst_percentage' in data and data['gst_percentage'] < 0:
+            raise serializers.ValidationError({
+                "gst_percentage": "GST percentage cannot be negative."
+            })
 
         return data
 

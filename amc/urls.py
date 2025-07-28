@@ -13,4 +13,5 @@ urlpatterns = [
     path('amc-update/<int:pk>/', views.update_amc, name='update_amc'),
     path('amc-delete/<int:pk>/', views.delete_amc, name='delete_amc'),
     path('amc-list/', views.amc_list, name='amc_list'),
+
 ]

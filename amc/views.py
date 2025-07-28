@@ -1,11 +1,13 @@
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
-from .models import AMC, AMCType, PaymentTerms,Customer
-from .serializers import AMCSerializer, AMCTypeSerializer, PaymentTermsSerializer,CustomerSerializer
+from rest_framework.permissions import IsAuthenticated
+from .models import AMC, AMCType, PaymentTerms, Customer
+from .serializers import AMCSerializer, AMCTypeSerializer, PaymentTermsSerializer, CustomerSerializer
 from django.core.exceptions import ValidationError
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def add_amc_type(request):
     serializer = AMCTypeSerializer(data=request.data)
     if serializer.is_valid():
@@ -14,6 +16,7 @@ def add_amc_type(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def add_payment_terms(request):
     serializer = PaymentTermsSerializer(data=request.data)
     if serializer.is_valid():
@@ -22,18 +25,21 @@ def add_payment_terms(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_amc_types(request):
     amc_types = AMCType.objects.all()
     serializer = AMCTypeSerializer(amc_types, many=True)
     return Response(serializer.data)
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_payment_terms(request):
     payment_terms = PaymentTerms.objects.all()
     serializer = PaymentTermsSerializer(payment_terms, many=True)
     return Response(serializer.data)
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def add_amc(request):
     serializer = AMCSerializer(data=request.data)
     if serializer.is_valid():
@@ -46,6 +52,7 @@ def add_amc(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
+@permission_classes([IsAuthenticated])
 def update_amc(request, pk):
     try:
         amc = AMC.objects.get(pk=pk)
@@ -63,6 +70,7 @@ def update_amc(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
 def delete_amc(request, pk):
     try:
         amc = AMC.objects.get(pk=pk)
@@ -72,6 +80,7 @@ def delete_amc(request, pk):
         return Response({"error": "AMC not found"}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def amc_list(request):
     amcs = AMC.objects.all()
     serializer = AMCSerializer(amcs, many=True)

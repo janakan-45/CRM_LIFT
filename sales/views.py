@@ -1,11 +1,13 @@
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from .models import Customer, Route, Branch, ProvinceState
 from .serializers import CustomerSerializer, RouteSerializer, BranchSerializer, ProvinceStateSerializer
 
 # Dynamic dropdown views
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def add_route(request):
     serializer = RouteSerializer(data=request.data)
     if serializer.is_valid():
@@ -14,6 +16,7 @@ def add_route(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def add_branch(request):
     serializer = BranchSerializer(data=request.data)
     if serializer.is_valid():
@@ -22,6 +25,7 @@ def add_branch(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def add_province_state(request):
     serializer = ProvinceStateSerializer(data=request.data)
     if serializer.is_valid():
@@ -30,18 +34,21 @@ def add_province_state(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_routes(request):
     routes = Route.objects.all()
     serializer = RouteSerializer(routes, many=True)
     return Response(serializer.data)
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_branches(request):
     branches = Branch.objects.all()
     serializer = BranchSerializer(branches, many=True)
     return Response(serializer.data)
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_province_states(request):
     province_states = ProvinceState.objects.all()
     serializer = ProvinceStateSerializer(province_states, many=True)
@@ -49,6 +56,7 @@ def get_province_states(request):
 
 # Customer CRUD views
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def add_customer(request):
     serializer = CustomerSerializer(data=request.data)
     if serializer.is_valid():
@@ -60,6 +68,7 @@ def add_customer(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
+@permission_classes([IsAuthenticated])
 def edit_customer(request, pk):
     try:
         customer = Customer.objects.get(pk=pk)
@@ -76,6 +85,7 @@ def edit_customer(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
 def delete_customer(request, pk):
     try:
         customer = Customer.objects.get(pk=pk)
@@ -85,6 +95,7 @@ def delete_customer(request, pk):
         return Response({"error": "Customer not found"}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def customer_list(request):
     customers = Customer.objects.all()
     serializer = CustomerSerializer(customers, many=True)

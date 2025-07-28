@@ -36,7 +36,11 @@ class AMC(models.Model):
     equipment_no = models.CharField(max_length=50, blank=True)
     notes = models.TextField(blank=True)
     is_generate_contract = models.BooleanField(default=False)
-    no_of_services = models.IntegerField(default=12)  # Default to 12 for routine services
+    no_of_services = models.IntegerField(default=12)
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    no_of_lifts = models.IntegerField(default=0)
+    gst_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)
+    total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, editable=False)
 
     def save(self, *args, **kwargs):
         if not self.reference_id:
@@ -46,6 +50,8 @@ class AMC(models.Model):
                 self.reference_id = f'AMC{str(last_id + 1).zfill(2)}'
             else:
                 self.reference_id = 'AMC01'
+        if self.is_generate_contract:
+            self.total = self.price * self.no_of_lifts * (1 + self.gst_percentage / 100)
         super().save(*args, **kwargs)
 
     def __str__(self):
