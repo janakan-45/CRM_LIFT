@@ -4,6 +4,10 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from .models import Customer, Route, Branch, ProvinceState
 from .serializers import CustomerSerializer, RouteSerializer, BranchSerializer, ProvinceStateSerializer
+from django.http import HttpResponse
+from openpyxl import Workbook
+from openpyxl.utils import get_column_letter
+from io import BytesIO
 
 # Dynamic dropdown views
 @api_view(['POST'])
@@ -100,3 +104,46 @@ def customer_list(request):
     customers = Customer.objects.all()
     serializer = CustomerSerializer(customers, many=True)
     return Response(serializer.data)
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def export_customers_to_excel(request):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Customers"
+
+    headers = [
+        'Reference ID', 'Name', 'Contact Person', 'Mobile', 'Email', 'Address',
+        'Route', 'Branch', 'Province/State', 'Status'
+    ]
+
+    for col_num, header in enumerate(headers, 1):
+        ws[f"{get_column_letter(col_num)}1"] = header
+
+    customers = Customer.objects.all()
+
+    for row_num, customer in enumerate(customers, 2):
+        ws[f"{get_column_letter(1)}{row_num}"] = customer.reference_id
+        ws[f"{get_column_letter(2)}{row_num}"] = customer.name
+        ws[f"{get_column_letter(3)}{row_num}"] = customer.contact_person
+        ws[f"{get_column_letter(4)}{row_num}"] = customer.mobile
+        ws[f"{get_column_letter(5)}{row_num}"] = customer.email
+        ws[f"{get_column_letter(6)}{row_num}"] = customer.address
+        ws[f"{get_column_letter(7)}{row_num}"] = customer.route.name if customer.route else ''
+        ws[f"{get_column_letter(8)}{row_num}"] = customer.branch.name if customer.branch else ''
+        ws[f"{get_column_letter(9)}{row_num}"] = customer.province_state.name if customer.province_state else ''
+        ws[f"{get_column_letter(10)}{row_num}"] = customer.status
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename=customers_export.xlsx'
+    response.write(output.read())
+
+    return response

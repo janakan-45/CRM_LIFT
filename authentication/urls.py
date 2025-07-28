@@ -50,6 +50,18 @@ urlpatterns = [
     path('delete-item/<int:pk>/', views.delete_item, name='delete_item'),
     path('export-items/', views.export_items_to_excel, name='export_items_to_excel'),
 
+
+    ################################complaint#########################################
+
+     path('add-employee/', views.add_employee, name='add_employee'),
+    path('employees/', views.get_employees, name='get_employees'),
+    path('add-complaint/', views.add_complaint, name='add_complaint'),
+    path('complaint-list/', views.complaint_list, name='complaint_list'),
+    path('edit-complaint/<int:pk>/', views.edit_complaint, name='edit_complaint'),
+    path('delete-complaint/<int:pk>/', views.delete_complaint, name='delete_complaint'),
+    path('export-complaints/', views.export_complaints_to_excel, name='export_complaints_to_excel'),
+    path('print-complaint/<int:pk>/', views.print_complaint, name='print_complaint'),
+
     
 ]+static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

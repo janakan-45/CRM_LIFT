@@ -131,4 +131,52 @@ class Item(models.Model):
         return self.item_number
 
 
-    
+
+###########################complaints########################################
+
+
+from sales.models import Customer
+
+class Employee(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+
+class Complaint(models.Model):
+    REFERENCE_PREFIX = 'CMP'
+    reference = models.CharField(max_length=10, unique=True, editable=False)
+    type = models.CharField(max_length=50, choices=[
+        ('Site Inspection', 'Site Inspection'),
+        ('Spec Checking', 'Spec Checking'),
+        ('Break Down Calls', 'Break Down Calls'),
+        ('Service Request', 'Service Request'),
+        ('New Installation', 'New Installation')
+    ])
+    date = models.DateTimeField(auto_now_add=True)
+    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True)
+    contact_person_name = models.CharField(max_length=100, blank=True)
+    contact_person_mobile = models.CharField(max_length=15, blank=True)
+    block_wing = models.CharField(max_length=50, blank=True)
+    assign_to = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True)
+    priority = models.CharField(max_length=10, choices=[
+        ('Urgent', 'Urgent'),
+        ('High', 'High'),
+        ('Medium', 'Medium'),
+        ('Low', 'Low')
+    ], default='Medium')
+    subject = models.CharField(max_length=200, blank=True)
+    message = models.TextField(blank=True)
+    customer_signature = models.TextField(blank=True)  # New field
+    technician_remark = models.TextField(blank=True)  # New field
+    technician_signature = models.TextField(blank=True)  # New field
+    solution = models.TextField(blank=True)  # New field
+
+    def save(self, *args, **kwargs):
+        if not self.reference:
+            last_complaint = Complaint.objects.all().order_by('id').last()
+            self.reference = f'{self.REFERENCE_PREFIX}{str(1000 + (last_complaint.id + 1) if last_complaint else 1001)}'
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.reference

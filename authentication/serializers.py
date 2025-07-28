@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Lift, FloorID, Brand, MachineType, MachineBrand, DoorType, DoorBrand, LiftType, ControllerBrand, Cabin
+from .models import Lift, FloorID, Brand, MachineType, MachineBrand, DoorType, DoorBrand, LiftType, ControllerBrand, Cabin,Complaint, Employee,Customer
 
 
 from rest_framework import serializers
@@ -211,3 +211,32 @@ class ItemSerializer(serializers.ModelSerializer):
             validated_data.pop('igst', None)
             validated_data.pop('gst', None)
         return super().create(validated_data)
+    
+
+
+
+##################################complaints########################################
+
+class EmployeeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Employee
+        fields = ['id', 'name']
+
+class ComplaintSerializer(serializers.ModelSerializer):
+    assign_to = serializers.PrimaryKeyRelatedField(queryset=Employee.objects.all(), write_only=True, required=False)
+    assign_to_name = serializers.SerializerMethodField()
+    customer = serializers.PrimaryKeyRelatedField(queryset=Customer.objects.all(), write_only=True, required=False)
+    customer_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Complaint
+        fields = ['id', 'reference', 'type', 'date', 'customer_name', 'contact_person_name', 
+                  'contact_person_mobile', 'block_wing', 'assign_to_name', 'priority', 
+                  'subject', 'message', 'customer_signature', 'technician_remark', 
+                  'technician_signature', 'solution', 'customer', 'assign_to']
+
+    def get_assign_to_name(self, obj):
+        return obj.assign_to.name if obj.assign_to else None
+
+    def get_customer_name(self, obj):
+        return obj.customer.name if obj.customer else None

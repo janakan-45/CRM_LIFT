@@ -16,4 +16,5 @@ urlpatterns = [
     path('customer-list/', views.customer_list, name='customer_list'),
     path('edit-customer/<int:pk>/', views.edit_customer, name='edit_customer'),
     path('delete-customer/<int:pk>/', views.delete_customer, name='delete_customer'),
+    path('export-customers/', views.export_customers_to_excel, name='export_customers_to_excel'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

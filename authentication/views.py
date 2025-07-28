@@ -4,8 +4,8 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
-from .models import Lift, FloorID, Brand, MachineType, MachineBrand, DoorType, DoorBrand, LiftType, ControllerBrand, Cabin, Type, Make, Unit, Item
-from .serializers import LiftSerializer, FloorIDSerializer, BrandSerializer, MachineTypeSerializer, MachineBrandSerializer, DoorTypeSerializer, DoorBrandSerializer, LiftTypeSerializer, ControllerBrandSerializer, CabinSerializer, TypeSerializer, MakeSerializer, UnitSerializer, ItemSerializer, UserRegistrationSerializer, UserLoginSerializer
+from .models import Lift, FloorID, Brand, MachineType, MachineBrand, DoorType, DoorBrand, LiftType, ControllerBrand, Cabin, Type, Make, Unit, Item,Complaint, Employee
+from .serializers import LiftSerializer, FloorIDSerializer, BrandSerializer, MachineTypeSerializer, MachineBrandSerializer, DoorTypeSerializer, DoorBrandSerializer, LiftTypeSerializer, ControllerBrandSerializer, CabinSerializer, TypeSerializer, MakeSerializer, UnitSerializer, ItemSerializer, UserRegistrationSerializer, UserLoginSerializer,ComplaintSerializer, EmployeeSerializer
 from django.http import HttpResponse
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
@@ -52,7 +52,6 @@ def login(request):
 
 
 ############################ Lift ######################################
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -469,3 +468,157 @@ def export_items_to_excel(request):
     response.write(output.read())
 
     return response
+
+
+####################################complaints########################################
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_employee(request):
+    serializer = EmployeeSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_employees(request):
+    employees = Employee.objects.all()
+    serializer = EmployeeSerializer(employees, many=True)
+    return Response(serializer.data)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_complaint(request):
+    serializer = ComplaintSerializer(data=request.data)
+    if serializer.is_valid():
+        complaint = serializer.save()
+        return Response({
+            "message": "Complaint added successfully!",
+            "complaint_id": complaint.id
+        }, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def complaint_list(request):
+    complaints = Complaint.objects.all()
+    serializer = ComplaintSerializer(complaints, many=True)
+    return Response(serializer.data)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def edit_complaint(request, pk):
+    try:
+        complaint = Complaint.objects.get(pk=pk)
+    except Complaint.DoesNotExist:
+        return Response({"error": "Complaint not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = ComplaintSerializer(complaint, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({
+            "message": "Complaint updated successfully!",
+            "complaint_id": complaint.id
+        }, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_complaint(request, pk):
+    try:
+        complaint = Complaint.objects.get(pk=pk)
+        complaint.delete()
+        return Response({"message": "Complaint deleted successfully!"}, status=status.HTTP_200_OK)
+    except Complaint.DoesNotExist:
+        return Response({"error": "Complaint not found"}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def export_complaints_to_excel(request):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Complaints"
+
+    headers = [
+        'Reference', 'Type', 'Date', 'Customer Name', 'Contact Person Name',
+        'Contact Person Mobile', 'Block/Wing', 'Assigned To', 'Priority',
+        'Subject', 'Message'
+    ]
+
+    for col_num, header in enumerate(headers, 1):
+        ws[f"{get_column_letter(col_num)}1"] = header
+
+    complaints = Complaint.objects.all()
+
+    for row_num, complaint in enumerate(complaints, 2):
+        ws[f"{get_column_letter(1)}{row_num}"] = complaint.reference
+        ws[f"{get_column_letter(2)}{row_num}"] = complaint.type
+        ws[f"{get_column_letter(3)}{row_num}"] = complaint.date.strftime('%Y-%m-%d %H:%M:%S')
+        ws[f"{get_column_letter(4)}{row_num}"] = complaint.customer.name if complaint.customer else ''
+        ws[f"{get_column_letter(5)}{row_num}"] = complaint.contact_person_name
+        ws[f"{get_column_letter(6)}{row_num}"] = complaint.contact_person_mobile
+        ws[f"{get_column_letter(7)}{row_num}"] = complaint.block_wing
+        ws[f"{get_column_letter(8)}{row_num}"] = complaint.assign_to.name if complaint.assign_to else ''
+        ws[f"{get_column_letter(9)}{row_num}"] = complaint.priority
+        ws[f"{get_column_letter(10)}{row_num}"] = complaint.subject
+        ws[f"{get_column_letter(11)}{row_num}"] = complaint.message
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename=complaints_export.xlsx'
+    response.write(output.read())
+
+    return response
+
+
+from django.template.loader import get_template
+from xhtml2pdf import pisa
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def print_complaint(request, pk):
+    try:
+        complaint = Complaint.objects.get(pk=pk)
+    except Complaint.DoesNotExist:
+        return Response({"error": "Complaint not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    # Prepare data for PDF
+    context = {
+        'company_name': 'Atom Lifts India Pvt Ltd',
+        'address': 'No.87B, Pillayar Koll Street, Mannurpet, Ambattur Indus Estate, Chennai 50, CHENNAI',
+        'phone': '9600087456',
+        'email': 'admin@atomlifts.com',
+        'ticket_no': complaint.reference,
+        'ticket_date': complaint.date.strftime('%d/%m/%Y %H:%M:%S'),
+        'ticket_type': complaint.type,
+        'priority': complaint.priority,
+        'customer_name': complaint.customer.name if complaint.customer else '',
+        'site_address': f"{complaint.contact_person_name}, {complaint.contact_person_mobile}",
+        'contact_person': complaint.contact_person_name,
+        'contact_mobile': complaint.contact_person_mobile,
+        'block_wing': complaint.block_wing,
+        'subject': complaint.subject,
+        'message': complaint.message,
+        'assigned_to': complaint.assign_to.name if complaint.assign_to else '',
+        'customer_signature': complaint.customer_signature,
+        'technician_remark': complaint.technician_remark,
+        'technician_signature': complaint.technician_signature,
+        'solution': complaint.solution
+    }
+
+    # Load template and render PDF
+    template = get_template('complaint_pdf.html')
+    html = template.render(context)
+    result = BytesIO()
+    pdf = pisa.pisaDocument(BytesIO(html.encode("UTF-8")), result)
+    if not pdf.err:
+        response = HttpResponse(result.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename=complaint_{complaint.reference}.pdf'
+        return response
+    return HttpResponse("Error generating PDF", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
