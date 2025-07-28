@@ -8,5 +8,10 @@ from django.conf import settings
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('authentication.urls')), 
+   
+    path('auth/', include('authentication.urls')), 
+    path('sales/',include('sales.urls')),
+    path('amc/',include('amc.urls')),
+    
+    
 ]

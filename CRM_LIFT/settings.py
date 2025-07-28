@@ -44,6 +44,9 @@ INSTALLED_APPS = [
     'rest_framework',
     'authentication',
     'rest_framework_simplejwt',
+    'sales',
+    'amc',
+    
 ]
 
 MIDDLEWARE = [
@@ -85,7 +88,7 @@ WSGI_APPLICATION = 'CRM_LIFT.wsgi.application'
 DATABASES = {
     'default': {
          'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'crm_lift',
+        'NAME': 'lift_crm2',
         'USER': 'root',
         'PASSWORD':'root',
         'HOST': '127.0.0.1',
@@ -132,7 +135,7 @@ CORS_ALLOW_HEADERS = [
     "accept-encoding", 
     "dnt",
     "user-agent",
-   
+    
 ]
 
 

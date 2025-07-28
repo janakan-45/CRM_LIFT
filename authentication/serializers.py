@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import Lift, FloorID, Brand, MachineType, MachineBrand, DoorType, DoorBrand, LiftType, ControllerBrand, Cabin
 
-# Existing serializers for related models (unchanged)
+# ###########################lift#######################################
 class FloorIDSerializer(serializers.ModelSerializer):
     class Meta:
         model = FloorID
@@ -110,3 +110,71 @@ class LiftSerializer(serializers.ModelSerializer):
 
     def get_cabin_value(self, obj):
         return obj.cabin.value if obj.cabin else None
+    
+
+
+#####################################items########################################
+
+from rest_framework import serializers
+from .models import Type, Make, Unit, Item
+
+class TypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Type
+        fields = ['id', 'value']
+
+class MakeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Make
+        fields = ['id', 'value']
+
+class UnitSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Unit
+        fields = ['id', 'value']
+
+class ItemSerializer(serializers.ModelSerializer):
+    make = serializers.PrimaryKeyRelatedField(queryset=Make.objects.all(), write_only=True)
+    type = serializers.PrimaryKeyRelatedField(queryset=Type.objects.all(), write_only=True)
+    unit = serializers.PrimaryKeyRelatedField(queryset=Unit.objects.all(), write_only=True)
+    make_value = serializers.SerializerMethodField()
+    type_value = serializers.SerializerMethodField()
+    unit_value = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Item
+        fields = [
+            'id', 'item_number', 'name', 'make_value', 'model', 'type_value', 'capacity',
+            'threshold_qty', 'sale_price', 'purchase_price', 'service_type', 'tax_preference',
+            'unit_value', 'sac_code', 'hsn_hac_code', 'igst', 'gst', 'description',
+            'make', 'type', 'unit'
+        ]
+
+    def get_make_value(self, obj):
+        return obj.make.value if obj.make else None
+
+    def get_type_value(self, obj):
+        return obj.type.value if obj.type else None
+
+    def get_unit_value(self, obj):
+        return obj.unit.value if obj.unit else None
+
+    def validate(self, data):
+        if data['service_type'] == 'Goods' and not data.get('hsn_hac_code'):
+            raise serializers.ValidationError("HSN/HAC Code is required for Goods.")
+        if data['service_type'] == 'Services' and data['tax_preference'] == 'Taxable' and not (data.get('igst') or data.get('gst')):
+            raise serializers.ValidationError("IGST or GST is required for Taxable Services.")
+        if data['service_type'] == 'Services' and data['tax_preference'] == 'Non-Taxable' and (data.get('igst') or data.get('gst')):
+            raise serializers.ValidationError("IGST and GST should not be set for Non-Taxable Services.")
+        return data
+
+    def create(self, validated_data):
+        if validated_data['service_type'] == 'Goods':
+            validated_data.pop('sac_code', None)
+            validated_data.pop('igst', None)
+            validated_data.pop('gst', None)
+        elif validated_data['service_type'] == 'Services' and validated_data['tax_preference'] == 'Non-Taxable':
+            validated_data.pop('sac_code', None)
+            validated_data.pop('igst', None)
+            validated_data.pop('gst', None)
+        return super().create(validated_data)

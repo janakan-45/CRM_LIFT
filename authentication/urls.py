@@ -3,13 +3,8 @@ from .import views
 from django.conf import settings
 from django.conf.urls.static import static
 
-
-from django.urls import path
-from . import views
-from django.conf import settings
-from django.conf.urls.static import static
-
 urlpatterns = [
+    ############################lift#######################################
     path('add-floor-id/', views.add_floor_id, name='add_floor_id'),
     path('add-brand/', views.add_brand, name='add_brand'),
     path('add-machine-type/', views.add_machine_type, name='add_machine_type'),
@@ -32,6 +27,22 @@ urlpatterns = [
     path('lift_list/', views.lift_list, name='lift_list'),
     path('edit_lift/<int:pk>/', views.edit_lift, name='edit_lift'),
     path('delete_lift/<int:pk>/', views.delete_lift, name='delete_lift'),
+    path('export-lifts/', views.export_lifts_to_excel, name='export_lifts_to_excel'),
+
+
+###############################items########################################
+
+    path('add-type/', views.add_type, name='add_type'),
+    path('add-make/', views.add_make, name='add_make'),
+    path('add-unit/', views.add_unit, name='add_unit'),
+    path('types/', views.get_types, name='get_types'),
+    path('makes/', views.get_makes, name='get_makes'),
+    path('units/', views.get_units, name='get_units'),
+    path('add-item/', views.add_item, name='add_item'),
+    path('item-list/', views.item_list, name='item_list'),
+    path('edit-item/<int:pk>/', views.edit_item, name='edit_item'),
+    path('delete-item/<int:pk>/', views.delete_item, name='delete_item'),
+    path('export-items/', views.export_items_to_excel, name='export_items_to_excel'),
 
     
 ]+static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
