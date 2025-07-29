@@ -1,5 +1,6 @@
 from django.db import models
 from sales.models import Customer  # Assuming sales app has Customer model
+from django.utils import timezone
 
 class AMCType(models.Model):
     name = models.CharField(max_length=50, unique=True)
@@ -41,6 +42,7 @@ class AMC(models.Model):
     no_of_lifts = models.IntegerField(default=0)
     gst_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, editable=False)
+    status = models.CharField(max_length=20, default='Pending')
 
     def save(self, *args, **kwargs):
         if not self.reference_id:
@@ -52,6 +54,16 @@ class AMC(models.Model):
                 self.reference_id = 'AMC01'
         if self.is_generate_contract:
             self.total = self.price * self.no_of_lifts * (1 + self.gst_percentage / 100)
+
+        # Determine status based on dates
+        today = timezone.now().date()
+        if self.start_date > today:
+            self.status = 'Pending'
+        elif self.start_date <= today <= self.end_date:
+            self.status = 'Active'
+        elif today > self.end_date:
+            self.status = 'Overdue'
+
         super().save(*args, **kwargs)
 
     def __str__(self):

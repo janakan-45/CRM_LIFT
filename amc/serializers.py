@@ -24,11 +24,12 @@ class AMCSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'customer', 'customer_id', 'reference_id', 'invoice_frequency', 'amc_type', 'amc_type_name',
             'payment_terms', 'payment_terms_name', 'start_date', 'end_date', 'uploads_files', 'equipment_no',
-            'notes', 'is_generate_contract', 'no_of_services', 'price', 'no_of_lifts', 'gst_percentage', 'total'
+            'notes', 'is_generate_contract', 'no_of_services', 'price', 'no_of_lifts', 'gst_percentage', 'total',
+            'status'
         ]
 
     def validate(self, data):
-        # Rule 1: Start date must be today (09:47 AM +0530, July 28, 2025) or later
+        # Rule 1: Start date must be today (02:31 PM +0530, July 29, 2025) or later
         today = timezone.now().date()
         if 'start_date' in data and data['start_date']:
             if data['start_date'] < today:

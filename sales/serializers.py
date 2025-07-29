@@ -45,3 +45,5 @@ class CustomerSerializer(serializers.ModelSerializer):
 
     def get_province_state_value(self, obj):
         return obj.province_state.value if obj.province_state else None
+    
+    
