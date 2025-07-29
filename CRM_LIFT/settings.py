@@ -79,7 +79,7 @@ WSGI_APPLICATION = 'CRM_LIFT.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'crm_lift',
+        'NAME': 'crm_new',
         'USER': 'root',
         'PASSWORD': 'root',
         'HOST': '127.0.0.1',

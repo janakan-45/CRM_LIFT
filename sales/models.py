@@ -33,7 +33,6 @@ class Customer(models.Model):
     site_address = models.TextField()
     email = models.EmailField()
     phone = models.CharField(max_length=15)
-    mobile_sms_notification = models.CharField(max_length=15, blank=True)
     office_address = models.TextField(blank=True)
     contact_person_name = models.CharField(max_length=100)
     designation = models.CharField(max_length=100, blank=True)

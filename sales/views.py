@@ -105,8 +105,6 @@ def customer_list(request):
     serializer = CustomerSerializer(customers, many=True)
     return Response(serializer.data)
 
-
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def export_customers_to_excel(request):
@@ -115,8 +113,8 @@ def export_customers_to_excel(request):
     ws.title = "Customers"
 
     headers = [
-        'Reference ID', 'Name', 'Contact Person', 'Mobile', 'Email', 'Address',
-        'Route', 'Branch', 'Province/State', 'Status'
+        'Reference ID', 'Site Name', 'Contact Person Name', 'Email', 'Site Address',
+        'Route', 'Branch', 'Province/State', 'Sector'
     ]
 
     for col_num, header in enumerate(headers, 1):
@@ -126,15 +124,14 @@ def export_customers_to_excel(request):
 
     for row_num, customer in enumerate(customers, 2):
         ws[f"{get_column_letter(1)}{row_num}"] = customer.reference_id
-        ws[f"{get_column_letter(2)}{row_num}"] = customer.name
-        ws[f"{get_column_letter(3)}{row_num}"] = customer.contact_person
-        ws[f"{get_column_letter(4)}{row_num}"] = customer.mobile
-        ws[f"{get_column_letter(5)}{row_num}"] = customer.email
-        ws[f"{get_column_letter(6)}{row_num}"] = customer.address
-        ws[f"{get_column_letter(7)}{row_num}"] = customer.route.name if customer.route else ''
-        ws[f"{get_column_letter(8)}{row_num}"] = customer.branch.name if customer.branch else ''
-        ws[f"{get_column_letter(9)}{row_num}"] = customer.province_state.name if customer.province_state else ''
-        ws[f"{get_column_letter(10)}{row_num}"] = customer.status
+        ws[f"{get_column_letter(2)}{row_num}"] = customer.site_name
+        ws[f"{get_column_letter(3)}{row_num}"] = customer.contact_person_name
+        ws[f"{get_column_letter(4)}{row_num}"] = customer.email
+        ws[f"{get_column_letter(5)}{row_num}"] = customer.site_address
+        ws[f"{get_column_letter(6)}{row_num}"] = customer.routes.value if customer.routes else ''
+        ws[f"{get_column_letter(7)}{row_num}"] = customer.branch.value if customer.branch else ''
+        ws[f"{get_column_letter(8)}{row_num}"] = customer.province_state.value if customer.province_state else ''
+        ws[f"{get_column_letter(9)}{row_num}"] = customer.sector
 
     output = BytesIO()
     wb.save(output)

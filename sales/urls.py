@@ -4,7 +4,6 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-
     path('add-route/', views.add_route, name='add_route'),
     path('add-branch/', views.add_branch, name='add_branch'),
     path('add-province-state/', views.add_province_state, name='add_province_state'),
@@ -17,7 +16,4 @@ urlpatterns = [
     path('edit-customer/<int:pk>/', views.edit_customer, name='edit_customer'),
     path('delete-customer/<int:pk>/', views.delete_customer, name='delete_customer'),
     path('export-customers/', views.export_customers_to_excel, name='export_customers_to_excel'),
-
-
-    
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

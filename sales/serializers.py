@@ -29,7 +29,7 @@ class CustomerSerializer(serializers.ModelSerializer):
         model = Customer
         fields = [
             'id', 'reference_id', 'site_id', 'job_no', 'site_name', 'site_address', 'email', 'phone',
-            'mobile_sms_notification', 'office_address', 'contact_person_name', 'designation',
+            'office_address', 'contact_person_name', 'designation',
             'pin_code', 'country', 'province_state_value', 'city', 'sector', 'routes_value',
             'branch_value', 'handover_date', 'billing_name', 'pan_number', 'gst_number',
             'routes', 'branch', 'province_state',
@@ -45,5 +45,3 @@ class CustomerSerializer(serializers.ModelSerializer):
 
     def get_province_state_value(self, obj):
         return obj.province_state.value if obj.province_state else None
-    
-    
