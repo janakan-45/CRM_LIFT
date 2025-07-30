@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'authentication',  # Your app
     'sales',
     'amc',
+    'routine_services',
 ]
 
 MIDDLEWARE = [

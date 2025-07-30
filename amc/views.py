@@ -2,10 +2,10 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from .models import AMC, AMCType, PaymentTerms, Customer
-from .serializers import AMCSerializer, AMCTypeSerializer, PaymentTermsSerializer, CustomerSerializer
-from django.core.exceptions import ValidationError
+from .models import AMC, AMCType, PaymentTerms
+from .serializers import AMCSerializer, AMCTypeSerializer, PaymentTermsSerializer
 
+###################################amc views######################################
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_amc_type(request):

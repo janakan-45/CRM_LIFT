@@ -12,6 +12,7 @@ urlpatterns = [
     path('auth/', include('authentication.urls')), 
     path('sales/',include('sales.urls')),
     path('amc/',include('amc.urls')),
+    path('routine/', include('routine_services.urls')),
     
     
 ]

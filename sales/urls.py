@@ -4,6 +4,8 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
+
+    ##########################customer URLs########################################
     path('add-route/', views.add_route, name='add_route'),
     path('add-branch/', views.add_branch, name='add_branch'),
     path('add-province-state/', views.add_province_state, name='add_province_state'),
@@ -16,4 +18,21 @@ urlpatterns = [
     path('edit-customer/<int:pk>/', views.edit_customer, name='edit_customer'),
     path('delete-customer/<int:pk>/', views.delete_customer, name='delete_customer'),
     path('export-customers/', views.export_customers_to_excel, name='export_customers_to_excel'),
+
+##################################quotation########################################
+     path('add-quotation/', views.add_quotation, name='add_quotation'),
+    path('edit-quotation/<int:pk>/', views.edit_quotation, name='edit_quotation'),
+    path('delete-quotation/<int:pk>/', views.delete_quotation, name='delete_quotation'),
+    path('quotation-list/', views.quotation_list, name='quotation_list'),
+    path('export-quotations-to-excel/', views.export_quotations_to_excel, name='export_quotations_to_excel'),
+
+
+
+#################################invoice########################################
+
+    path('add-invoice/', views.add_invoice, name='add_invoice'),
+    path('edit-invoice/<int:pk>/', views.edit_invoice, name='edit_invoice'),
+    path('delete-invoice/<int:pk>/', views.delete_invoice, name='delete_invoice'),
+    path('invoice-list/', views.invoice_list, name='invoice_list'),
+    path('export-invoices-to-excel/', views.export_invoices_to_excel, name='export_invoices_to_excel'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

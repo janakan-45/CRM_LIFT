@@ -1,5 +1,5 @@
 from django.db import models
-
+##########################################3Customer Model#########################################
 # Dynamic dropdown models
 class Route(models.Model):
     value = models.CharField(max_length=100, unique=True)
@@ -70,6 +70,92 @@ class Customer(models.Model):
                 self.reference_id = f'CUST{str(last_id + 1).zfill(3)}'
             else:
                 self.reference_id = 'CUST001'
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.reference_id
+    
+
+
+######################################## Quotation model#########################################
+
+from amc.models import AMCType
+from authentication.models import  Lift
+
+class Quotation(models.Model):
+    REFERENCE_PREFIX = 'ALQ'
+    reference_id = models.CharField(max_length=10, unique=True, editable=False)
+    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True)
+    amc_type = models.ForeignKey(AMCType, on_delete=models.SET_NULL, null=True, blank=True)
+    sales_service_executive = models.ForeignKey('authentication.Employee', on_delete=models.SET_NULL, null=True, blank=True)
+    lifts = models.ManyToManyField(Lift)
+    type = models.CharField(
+        max_length=50,
+        choices=[
+            ('Parts/Peripheral Quotation', 'Parts/Peripheral Quotation'),
+            ('Repair', 'Repair'),
+            ('AMC Renewal Quotation', 'AMC Renewal Quotation'),
+            ('AMC', 'AMC')
+        ],
+        default='Parts/Peripheral Quotation'
+    )
+    year_of_make = models.CharField(max_length=4, blank=True)
+    date = models.DateField(auto_now_add=True)
+    remark = models.TextField(blank=True)
+    other_remark = models.TextField(blank=True)
+    uploads_files = models.FileField(upload_to='quotation_uploads/', null=True, blank=True, max_length=100)
+
+    def save(self, *args, **kwargs):
+        if not self.reference_id:
+            last_quotation = Quotation.objects.all().order_by('id').last()
+            self.reference_id = f'{self.REFERENCE_PREFIX}{str(1000 + (last_quotation.id + 1) if last_quotation else 1001)}'
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.reference_id
+    
+
+
+
+########################invoice model########################
+
+class Invoice(models.Model):
+    REFERENCE_PREFIX = 'INV'
+    reference_id = models.CharField(max_length=10, unique=True, editable=False)
+    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True)
+    amc_type = models.ForeignKey(AMCType, on_delete=models.SET_NULL, null=True, blank=True)
+    start_date = models.DateField()
+    due_date = models.DateField()
+    discount = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)
+    payment_term = models.CharField(
+        max_length=10,
+        choices=[
+            ('cash', 'Cash'),
+            ('cheque', 'Cheque'),
+            ('neft', 'NEFT')
+        ],
+        default='cash'
+    )
+    uploads_files = models.FileField(upload_to='invoice_uploads/', null=True, blank=True, max_length=100)
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('open', 'Open'),
+            ('paid', 'Paid'),
+            ('partially_paid', 'Partially Paid')
+        ],
+        default='open'
+    )
+
+
+    def save(self, *args, **kwargs):
+        if not self.reference_id:
+            last_invoice = Invoice.objects.all().order_by('id').last()
+            if last_invoice:
+                last_id = int(last_invoice.reference_id.replace('INV', ''))
+                self.reference_id = f'{self.REFERENCE_PREFIX}{str(last_id + 1).zfill(3)}'
+            else:
+                self.reference_id = 'INV001'
         super().save(*args, **kwargs)
 
     def __str__(self):

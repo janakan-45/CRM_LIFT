@@ -2,6 +2,8 @@ from django.db import models
 from sales.models import Customer  # Assuming sales app has Customer model
 from django.utils import timezone
 
+####################################amc/models.py####################################   
+
 class AMCType(models.Model):
     name = models.CharField(max_length=50, unique=True)
 

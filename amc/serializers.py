@@ -3,6 +3,8 @@ from .models import AMC, AMCType, PaymentTerms
 from sales.serializers import CustomerSerializer
 from django.utils import timezone
 
+
+###################################amc/serializers.py###################################
 class AMCTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = AMCType
