@@ -69,7 +69,8 @@ def add_customer(request):
         customer = serializer.save()
         return Response({
             "message": "Customer added successfully!",
-            "reference_id": customer.reference_id
+            "reference_id": customer.reference_id,
+            "site_id": customer.site_id
         }, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -83,10 +84,11 @@ def edit_customer(request, pk):
 
     serializer = CustomerSerializer(customer, data=request.data, partial=True)
     if serializer.is_valid():
-        serializer.save()
+        customer = serializer.save()
         return Response({
             "message": "Customer updated successfully!",
-            "reference_id": customer.reference_id
+            "reference_id": customer.reference_id,
+            "site_id": customer.site_id
         }, status=status.HTTP_200_OK)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -115,7 +117,7 @@ def export_customers_to_excel(request):
     ws.title = "Customers"
 
     headers = [
-        'Reference ID', 'Site Name', 'Contact Person Name', 'Email', 'Site Address',
+        'Reference ID', 'Site ID', 'Site Name', 'Contact Person Name', 'Email', 'Site Address',
         'Route', 'Branch', 'Province/State', 'Sector'
     ]
 
@@ -126,14 +128,15 @@ def export_customers_to_excel(request):
 
     for row_num, customer in enumerate(customers, 2):
         ws[f"{get_column_letter(1)}{row_num}"] = customer.reference_id
-        ws[f"{get_column_letter(2)}{row_num}"] = customer.site_name
-        ws[f"{get_column_letter(3)}{row_num}"] = customer.contact_person_name
-        ws[f"{get_column_letter(4)}{row_num}"] = customer.email
-        ws[f"{get_column_letter(5)}{row_num}"] = customer.site_address
-        ws[f"{get_column_letter(6)}{row_num}"] = customer.routes.value if customer.routes else ''
-        ws[f"{get_column_letter(7)}{row_num}"] = customer.branch.value if customer.branch else ''
-        ws[f"{get_column_letter(8)}{row_num}"] = customer.province_state.value if customer.province_state else ''
-        ws[f"{get_column_letter(9)}{row_num}"] = customer.sector
+        ws[f"{get_column_letter(2)}{row_num}"] = customer.site_id
+        ws[f"{get_column_letter(3)}{row_num}"] = customer.site_name
+        ws[f"{get_column_letter(4)}{row_num}"] = customer.contact_person_name
+        ws[f"{get_column_letter(5)}{row_num}"] = customer.email
+        ws[f"{get_column_letter(6)}{row_num}"] = customer.site_address
+        ws[f"{get_column_letter(7)}{row_num}"] = customer.routes.value if customer.routes else ''
+        ws[f"{get_column_letter(8)}{row_num}"] = customer.branch.value if customer.branch else ''
+        ws[f"{get_column_letter(9)}{row_num}"] = customer.province_state.value if customer.province_state else ''
+        ws[f"{get_column_letter(10)}{row_num}"] = customer.sector
 
     output = BytesIO()
     wb.save(output)
@@ -146,7 +149,6 @@ def export_customers_to_excel(request):
     response.write(output.read())
 
     return response
-
 
 
 ###########################################quotation###################################3

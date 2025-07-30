@@ -27,7 +27,7 @@ SECTOR_CHOICES = (
 
 class Customer(models.Model):
     reference_id = models.CharField(max_length=10, unique=True, editable=False)
-    site_id = models.CharField(max_length=10, unique=True)  # Added Site ID
+    site_id = models.CharField(max_length=30)   # Added Site ID
     job_no = models.CharField(max_length=50, blank=True)
     site_name = models.CharField(max_length=100)
     site_address = models.TextField()

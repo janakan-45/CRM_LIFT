@@ -19,9 +19,9 @@ class ProvinceStateSerializer(serializers.ModelSerializer):
         fields = ['id', 'value']
 
 class CustomerSerializer(serializers.ModelSerializer):
-    routes = serializers.PrimaryKeyRelatedField(queryset=Route.objects.all(), write_only=True)
-    branch = serializers.PrimaryKeyRelatedField(queryset=Branch.objects.all(), write_only=True)
-    province_state = serializers.PrimaryKeyRelatedField(queryset=ProvinceState.objects.all(), write_only=True)
+    routes = serializers.PrimaryKeyRelatedField(queryset=Route.objects.all(), write_only=True, required=False)
+    branch = serializers.PrimaryKeyRelatedField(queryset=Branch.objects.all(), write_only=True, required=False)
+    province_state = serializers.PrimaryKeyRelatedField(queryset=ProvinceState.objects.all(), write_only=True, required=False)
 
     routes_value = serializers.SerializerMethodField()
     branch_value = serializers.SerializerMethodField()
@@ -47,7 +47,6 @@ class CustomerSerializer(serializers.ModelSerializer):
 
     def get_province_state_value(self, obj):
         return obj.province_state.value if obj.province_state else None
-    
 
 
 #########################################Quotation Serializer#########################################
