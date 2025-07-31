@@ -38,10 +38,11 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt',  # Simple JWT already included
-    'authentication',  # Your app
+    'authentication',  
     'sales',
     'amc',
     'routine_services',
+    'inventory',  
 ]
 
 MIDDLEWARE = [

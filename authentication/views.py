@@ -62,6 +62,34 @@ def add_floor_id(request):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def edit_floor_id(request, pk):
+    try:
+        floor_id = FloorID.objects.get(pk=pk)
+    except FloorID.DoesNotExist:
+        return Response({"error": "FloorID not found"}, status=status.HTTP_404_NOT_FOUND)
+    serializer = FloorIDSerializer(floor_id, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({
+            "message": "FloorID updated successfully!",
+            "floor_id": floor_id.id
+        }, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_floor_id(request, pk):
+    try:
+        floor_id = FloorID.objects.get(pk=pk)
+        floor_id.delete()
+        return Response({"message": "FloorID deleted successfully!"}, status=status.HTTP_200_OK)
+    except FloorID.DoesNotExist:
+        return Response({"error": "FloorID not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -71,6 +99,35 @@ def add_brand(request):
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def edit_brand(request, pk):
+    try:
+        brand = Brand.objects.get(pk=pk)
+    except Brand.DoesNotExist:
+        return Response({"error": "Brand not found"}, status=status.HTTP_404_NOT_FOUND)
+    serializer = BrandSerializer(brand, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({
+            "message": "Brand updated successfully!",
+            "brand_id": brand.id
+        }, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_brand(request, pk):
+    try:
+        brand = Brand.objects.get(pk=pk)
+        brand.delete()
+        return Response({"message": "Brand deleted successfully!"}, status=status.HTTP_200_OK)
+    except Brand.DoesNotExist:
+        return Response({"error": "Brand not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
 
 
 @api_view(['POST'])
@@ -83,6 +140,34 @@ def add_machine_type(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def edit_machine_type(request, pk):
+    try:
+        machine_type = MachineType.objects.get(pk=pk)
+    except MachineType.DoesNotExist:
+        return Response({"error": "MachineType not found"}, status=status.HTTP_404_NOT_FOUND)
+    serializer = MachineTypeSerializer(machine_type, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({
+            "message": "MachineType updated successfully!",
+            "machine_type_id": machine_type.id
+        }, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_machine_type(request, pk):
+    try:
+        machine_type = MachineType.objects.get(pk=pk)
+        machine_type.delete()
+        return Response({"message": "MachineType deleted successfully!"}, status=status.HTTP_200_OK)
+    except MachineType.DoesNotExist:
+        return Response({"error": "MachineType not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_machine_brand(request):
@@ -91,6 +176,33 @@ def add_machine_brand(request):
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def edit_machine_brand(request, pk):
+    try:
+        machine_brand = MachineBrand.objects.get(pk=pk)
+    except MachineBrand.DoesNotExist:
+        return Response({"error": "MachineBrand not found"}, status=status.HTTP_404_NOT_FOUND)
+    serializer = MachineBrandSerializer(machine_brand, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({
+            "message": "MachineBrand updated successfully!",
+            "machine_brand_id": machine_brand.id
+        }, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_machine_brand(request, pk):
+    try:
+        machine_brand = MachineBrand.objects.get(pk=pk)
+        machine_brand.delete()
+        return Response({"message": "MachineBrand deleted successfully!"}, status=status.HTTP_200_OK)
+    except MachineBrand.DoesNotExist:
+        return Response({"error": "MachineBrand not found"}, status=status.HTTP_404_NOT_FOUND)
+
 
 
 @api_view(['POST'])
@@ -101,6 +213,32 @@ def add_door_type(request):
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def edit_door_type(request, pk):
+    try:
+        door_type = DoorType.objects.get(pk=pk)
+    except DoorType.DoesNotExist:
+        return Response({"error": "DoorType not found"}, status=status.HTTP_404_NOT_FOUND)
+    serializer = DoorTypeSerializer(door_type, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({
+            "message": "DoorType updated successfully!",
+            "door_type_id": door_type.id
+        }, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_door_type(request, pk):
+    try:
+        door_type = DoorType.objects.get(pk=pk)
+        door_type.delete()
+        return Response({"message": "DoorType deleted successfully!"}, status=status.HTTP_200_OK)
+    except DoorType.DoesNotExist:
+        return Response({"error": "DoorType not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
 @api_view(['POST'])
@@ -113,6 +251,33 @@ def add_door_brand(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def edit_door_brand(request, pk):
+    try:
+        door_brand = DoorBrand.objects.get(pk=pk)
+    except DoorBrand.DoesNotExist:
+        return Response({"error": "DoorBrand not found"}, status=status.HTTP_404_NOT_FOUND)
+    serializer = DoorBrandSerializer(door_brand, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({
+            "message": "DoorBrand updated successfully!",
+            "door_brand_id": door_brand.id
+        }, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_door_brand(request, pk):
+    try:
+        door_brand = DoorBrand.objects.get(pk=pk)
+        door_brand.delete()
+        return Response({"message": "DoorBrand deleted successfully!"}, status=status.HTTP_200_OK)
+    except DoorBrand.DoesNotExist:
+        return Response({"error": "DoorBrand not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_lift_type(request):
@@ -121,6 +286,32 @@ def add_lift_type(request):
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def edit_lift_type(request, pk):
+    try:
+        lift_type = LiftType.objects.get(pk=pk)
+    except LiftType.DoesNotExist:
+        return Response({"error": "LiftType not found"}, status=status.HTTP_404_NOT_FOUND)
+    serializer = LiftTypeSerializer(lift_type, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({
+            "message": "LiftType updated successfully!",
+            "lift_type_id": lift_type.id
+        }, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_lift_type(request, pk):
+    try:
+        lift_type = LiftType.objects.get(pk=pk)
+        lift_type.delete()
+        return Response({"message": "LiftType deleted successfully!"}, status=status.HTTP_200_OK)
+    except LiftType.DoesNotExist:
+        return Response({"error": "LiftType not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
 @api_view(['POST'])
@@ -133,6 +324,34 @@ def add_controller_brand(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def edit_controller_brand(request, pk):
+    try:
+        controller_brand = ControllerBrand.objects.get(pk=pk)
+    except ControllerBrand.DoesNotExist:
+        return Response({"error": "ControllerBrand not found"}, status=status.HTTP_404_NOT_FOUND)
+    serializer = ControllerBrandSerializer(controller_brand, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({
+            "message": "ControllerBrand updated successfully!",
+            "controller_brand_id": controller_brand.id
+        }, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_controller_brand(request, pk):
+    try:
+        controller_brand = ControllerBrand.objects.get(pk=pk)
+        controller_brand.delete()
+        return Response({"message": "ControllerBrand deleted successfully!"}, status=status.HTTP_200_OK)
+    except ControllerBrand.DoesNotExist:
+        return Response({"error": "ControllerBrand not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_cabin(request):
@@ -141,6 +360,33 @@ def add_cabin(request):
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def edit_cabin(request, pk):
+    try:
+        cabin = Cabin.objects.get(pk=pk)
+    except Cabin.DoesNotExist:
+        return Response({"error": "Cabin not found"}, status=status.HTTP_404_NOT_FOUND)
+    serializer = CabinSerializer(cabin, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({
+            "message": "Cabin updated successfully!",
+            "cabin_id": cabin.id
+        }, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_cabin(request, pk):
+    try:
+        cabin = Cabin.objects.get(pk=pk)
+        cabin.delete()
+        return Response({"message": "Cabin deleted successfully!"}, status=status.HTTP_200_OK)
+    except Cabin.DoesNotExist:
+        return Response({"error": "Cabin not found"}, status=status.HTTP_404_NOT_FOUND)
+
 
 
 @api_view(['GET'])
@@ -313,6 +559,67 @@ def export_lifts_to_excel(request):
 
     return response
 
+import csv
+import io
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def import_lifts_csv(request):
+    if 'file' not in request.FILES:
+        return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+
+    csv_file = request.FILES['file']
+    if not csv_file.name.endswith('.csv'):
+        return Response({"error": "File is not a CSV"}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        decoded_file = csv_file.read().decode('utf-8')
+        io_string = io.StringIO(decoded_file)
+        reader = csv.reader(io_string, delimiter=',')
+        next(reader)  # Skip header row
+        for row in reader:
+            if not row:  # Skip blank rows
+                continue
+            if any(',' in field for field in row):  # Check for commas in data
+                return Response({"error": "CSV contains commas in data"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Map CSV columns to Lift model fields
+            # Assuming CSV order: lift_code, name, price, model, no_of_passengers, load_kg, speed,
+            # floor_id_value, brand_value, lift_type_value, machine_type_value, machine_brand_value,
+            # door_type_value, door_brand_value, controller_brand_value, cabin_value
+            lift_data = {
+                'lift_code': row[0],
+                'name': row[1],
+                'price': float(row[2]) if row[2] else 0.00,
+                'model': row[3],
+                'no_of_passengers': row[4],
+                'load_kg': row[5],
+                'speed': row[6],
+                # Map foreign key values to their IDs based on 'value' fields
+                'floor_id': FloorID.objects.get_or_create(value=row[7])[0],
+                'brand': Brand.objects.get_or_create(value=row[8])[0],
+                'lift_type': LiftType.objects.get_or_create(value=row[9])[0],
+                'machine_type': MachineType.objects.get_or_create(value=row[10])[0],
+                'machine_brand': MachineBrand.objects.get_or_create(value=row[11])[0],
+                'door_type': DoorType.objects.get_or_create(value=row[12])[0],
+                'door_brand': DoorBrand.objects.get_or_create(value=row[13])[0],
+                'controller_brand': ControllerBrand.objects.get_or_create(value=row[14])[0],
+                'cabin': Cabin.objects.get_or_create(value=row[15])[0],
+            }
+            serializer = LiftSerializer(data=lift_data)
+            if serializer.is_valid():
+                serializer.save()
+            else:
+                return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"message": "Lifts imported successfully!"}, status=status.HTTP_201_CREATED)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
 
 ############################ Items ######################################
 
@@ -326,6 +633,32 @@ def add_type(request):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def edit_type(request, pk):
+    try:
+        type_obj = Type.objects.get(pk=pk)
+    except Type.DoesNotExist:
+        return Response({"error": "Type not found"}, status=status.HTTP_404_NOT_FOUND)
+    serializer = TypeSerializer(type_obj, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({
+            "message": "Type updated successfully!",
+            "type_id": type_obj.id
+        }, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_type(request, pk):
+    try:
+        type_obj = Type.objects.get(pk=pk)
+        type_obj.delete()
+        return Response({"message": "Type deleted successfully!"}, status=status.HTTP_200_OK)
+    except Type.DoesNotExist:
+        return Response({"error": "Type not found"}, status=status.HTTP_404_NOT_FOUND)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -336,6 +669,33 @@ def add_make(request):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def edit_make(request, pk):
+    try:
+        make = Make.objects.get(pk=pk)
+    except Make.DoesNotExist:
+        return Response({"error": "Make not found"}, status=status.HTTP_404_NOT_FOUND)
+    serializer = MakeSerializer(make, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({
+            "message": "Make updated successfully!",
+            "make_id": make.id
+        }, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_make(request, pk):
+    try:
+        make = Make.objects.get(pk=pk)
+        make.delete()
+        return Response({"message": "Make deleted successfully!"}, status=status.HTTP_200_OK)
+    except Make.DoesNotExist:
+        return Response({"error": "Make not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -345,6 +705,33 @@ def add_unit(request):
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def edit_unit(request, pk):
+    try:
+        unit = Unit.objects.get(pk=pk)
+    except Unit.DoesNotExist:
+        return Response({"error": "Unit not found"}, status=status.HTTP_404_NOT_FOUND)
+    serializer = UnitSerializer(unit, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({
+            "message": "Unit updated successfully!",
+            "unit_id": unit.id
+        }, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_unit(request, pk):
+    try:
+        unit = Unit.objects.get(pk=pk)
+        unit.delete()
+        return Response({"message": "Unit deleted successfully!"}, status=status.HTTP_200_OK)
+    except Unit.DoesNotExist:
+        return Response({"error": "Unit not found"}, status=status.HTTP_404_NOT_FOUND)
+
 
 
 @api_view(['GET'])
@@ -469,6 +856,62 @@ def export_items_to_excel(request):
 
     return response
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def import_items_csv(request):
+    if 'file' not in request.FILES:
+        return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+
+    csv_file = request.FILES['file']
+    if not csv_file.name.endswith('.csv'):
+        return Response({"error": "File is not a CSV"}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        decoded_file = csv_file.read().decode('utf-8')
+        io_string = io.StringIO(decoded_file)
+        reader = csv.reader(io_string, delimiter=',')
+        next(reader)  # Skip header row
+        for row in reader:
+            if not row:  # Skip blank rows
+                continue
+            if any(',' in field or not field.isalnum() for field in row):  # Check for commas or special characters
+                return Response({"error": "CSV contains commas or special characters"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Map CSV columns to Item model fields
+            # Assuming CSV order: item_number, name, make_value, model, type_value, capacity,
+            # threshold_qty, sale_price, purchase_price, service_type, tax_preference, unit_value,
+            # sac_code, hsn_hac_code, igst, gst, description
+            item_data = {
+                'name': row[1],
+                'make': Make.objects.get_or_create(value=row[2])[0],
+                'model': row[3],
+                'type': Type.objects.get_or_create(value=row[4])[0],
+                'capacity': row[5],
+                'threshold_qty': int(row[6]) if row[6] else 0,
+                'sale_price': float(row[7]) if row[7] else 0.00,
+                'purchase_price': float(row[8]) if row[8] else 0.00,
+                'service_type': row[9] if row[9] in ['Services', 'Goods'] else 'Goods',
+                'tax_preference': row[10] if row[10] in ['Non-Taxable', 'Taxable'] else 'Non-Taxable',
+                'unit': Unit.objects.get_or_create(value=row[11])[0],
+                'sac_code': row[12] if row[12] else None,
+                'hsn_hac_code': row[13] if row[13] else None,
+                'igst': float(row[14]) if row[14] else None,
+                'gst': float(row[15]) if row[15] else None,
+                'description': row[16] if row[16] else None,
+            }
+            serializer = ItemSerializer(data=item_data)
+            if serializer.is_valid():
+                serializer.save()
+            else:
+                return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"message": "Items imported successfully!"}, status=status.HTTP_201_CREATED)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
 
 ####################################complaints########################################
 @api_view(['POST'])
@@ -479,6 +922,34 @@ def add_employee(request):
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def edit_employee(request, pk):
+    try:
+        employee = Employee.objects.get(pk=pk)
+    except Employee.DoesNotExist:
+        return Response({"error": "Employee not found"}, status=status.HTTP_404_NOT_FOUND)
+    serializer = EmployeeSerializer(employee, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({
+            "message": "Employee updated successfully!",
+            "employee_id": employee.id
+        }, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_employee(request, pk):
+    try:
+        employee = Employee.objects.get(pk=pk)
+        employee.delete()
+        return Response({"message": "Employee deleted successfully!"}, status=status.HTTP_200_OK)
+    except Employee.DoesNotExist:
+        return Response({"error": "Employee not found"}, status=status.HTTP_404_NOT_FOUND)
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

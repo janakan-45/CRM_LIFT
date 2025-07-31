@@ -21,6 +21,32 @@ def add_route(request):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def edit_route(request, pk):
+    try:
+        route = Route.objects.get(pk=pk)
+    except Route.DoesNotExist:
+        return Response({"error": "Route not found"}, status=status.HTTP_404_NOT_FOUND)
+    serializer = RouteSerializer(route, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({
+            "message": "Route updated successfully!",
+            "route_id": route.id
+        }, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_route(request, pk):
+    try:
+        route = Route.objects.get(pk=pk)
+        route.delete()
+        return Response({"message": "Route deleted successfully!"}, status=status.HTTP_200_OK)
+    except Route.DoesNotExist:
+        return Response({"error": "Route not found"}, status=status.HTTP_404_NOT_FOUND)
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_branch(request):
@@ -30,6 +56,33 @@ def add_branch(request):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def edit_branch(request, pk):
+    try:
+        branch = Branch.objects.get(pk=pk)
+    except Branch.DoesNotExist:
+        return Response({"error": "Branch not found"}, status=status.HTTP_404_NOT_FOUND)
+    serializer = BranchSerializer(branch, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({
+            "message": "Branch updated successfully!",
+            "branch_id": branch.id
+        }, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_branch(request, pk):
+    try:
+        branch = Branch.objects.get(pk=pk)
+        branch.delete()
+        return Response({"message": "Branch deleted successfully!"}, status=status.HTTP_200_OK)
+    except Branch.DoesNotExist:
+        return Response({"error": "Branch not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_province_state(request):
@@ -38,6 +91,32 @@ def add_province_state(request):
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def edit_province_state(request, pk):
+    try:
+        province_state = ProvinceState.objects.get(pk=pk)
+    except ProvinceState.DoesNotExist:
+        return Response({"error": "ProvinceState not found"}, status=status.HTTP_404_NOT_FOUND)
+    serializer = ProvinceStateSerializer(province_state, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({
+            "message": "ProvinceState updated successfully!",
+            "province_state_id": province_state.id
+        }, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_province_state(request, pk):
+    try:
+        province_state = ProvinceState.objects.get(pk=pk)
+        province_state.delete()
+        return Response({"message": "ProvinceState deleted successfully!"}, status=status.HTTP_200_OK)
+    except ProvinceState.DoesNotExist:
+        return Response({"error": "ProvinceState not found"}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -149,6 +228,77 @@ def export_customers_to_excel(request):
     response.write(output.read())
 
     return response
+
+
+import csv
+import io
+from django.utils import timezone
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def import_customers_csv(request):
+    if 'file' not in request.FILES:
+        return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+
+    csv_file = request.FILES['file']
+    if not csv_file.name.endswith('.csv'):
+        return Response({"error": "File is not a CSV"}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        decoded_file = csv_file.read().decode('utf-8')
+        io_string = io.StringIO(decoded_file)
+        reader = csv.reader(io_string, delimiter=',')
+        next(reader)  # Skip header row
+        for row in reader:
+            if not row:  # Skip blank rows
+                continue
+            if any(',' in field for field in row):  # Check for commas in data
+                return Response({"error": "CSV contains commas in data"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Map CSV columns to Customer model fields
+            # Assuming CSV order: site_id, job_no, site_name, site_address, email, phone, office_address,
+            # contact_person_name, designation, pin_code, country, province_state_value, city, sector,
+            # routes_value, branch_value, handover_date, billing_name, pan_number, gst_number
+            customer_data = {
+                'site_id': row[0] if row[0] else '',
+                'job_no': row[1] if row[1] else '',
+                'site_name': row[2] if row[2] else '',
+                'site_address': row[3] if row[3] else '',
+                'email': row[4] if row[4] else '',
+                'phone': row[5] if row[5] else '',
+                'office_address': row[6] if row[6] else '',
+                'contact_person_name': row[7] if row[7] else '',
+                'designation': row[8] if row[8] else '',
+                'pin_code': row[9] if row[9] else '',
+                'country': row[10] if row[10] else '',
+                'province_state': ProvinceState.objects.get_or_create(value=row[11])[0] if row[11] else None,
+                'city': row[12] if row[12] else '',
+                'sector': row[13] if row[13] in ['government', 'private'] else 'private',
+                'routes': Route.objects.get_or_create(value=row[14])[0] if row[14] else None,
+                'branch': Branch.objects.get_or_create(value=row[15])[0] if row[15] else None,
+                'handover_date': timezone.datetime.strptime(row[16], '%Y-%m-%d').date() if row[16] else None,
+                'billing_name': row[17] if row[17] else '',
+                'pan_number': row[18] if row[18] else '',
+                'gst_number': row[19] if row[19] else '',
+                'active_mobile': int(row[20]) if row[20] else 0,
+                'expired_mobile': int(row[21]) if row[21] else 0,
+                'contracts': int(row[22]) if row[22] else 0,
+                'no_of_lifts': int(row[23]) if row[23] else 0,
+                'completed_services': int(row[24]) if row[24] else 0,
+                'due_services': int(row[25]) if row[25] else 0,
+                'overdue_services': int(row[26]) if row[26] else 0,
+                'tickets': int(row[27]) if row[27] else 0,
+            }
+            serializer = CustomerSerializer(data=customer_data)
+            if serializer.is_valid():
+                serializer.save()
+            else:
+                return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"message": "Customers imported successfully!"}, status=status.HTTP_201_CREATED)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 ###########################################quotation###################################3

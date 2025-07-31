@@ -7,8 +7,14 @@ urlpatterns = [
 
     ##########################customer URLs########################################
     path('add-route/', views.add_route, name='add_route'),
+    path('edit-route/<int:pk>/', views.edit_route, name='edit_route'),
+    path('delete-route/<int:pk>/', views.delete_route, name='delete_route'),
     path('add-branch/', views.add_branch, name='add_branch'),
+    path('edit-branch/<int:pk>/', views.edit_branch, name='edit_branch'),
+    path('delete-branch/<int:pk>/', views.delete_branch, name='delete_branch'),
     path('add-province-state/', views.add_province_state, name='add_province_state'),
+    path('edit-province-state/<int:pk>/', views.edit_province_state, name='edit_province_state'),
+    path('delete-province-state/<int:pk>/', views.delete_province_state, name='delete_province_state'),
     path('routes/', views.get_routes, name='get_routes'),
     path('branches/', views.get_branches, name='get_branches'),
     path('province-states/', views.get_province_states, name='get_province_states'),
@@ -18,6 +24,7 @@ urlpatterns = [
     path('edit-customer/<int:pk>/', views.edit_customer, name='edit_customer'),
     path('delete-customer/<int:pk>/', views.delete_customer, name='delete_customer'),
     path('export-customers/', views.export_customers_to_excel, name='export_customers_to_excel'),
+    path('import-customers-csv/', views.import_customers_csv, name='import_customers_csv'),
 
 ##################################quotation########################################
      path('add-quotation/', views.add_quotation, name='add_quotation'),

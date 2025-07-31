@@ -13,6 +13,7 @@ urlpatterns = [
     path('sales/',include('sales.urls')),
     path('amc/',include('amc.urls')),
     path('routine/', include('routine_services.urls')),
+    path('inventory/', include('inventory.urls')),
     
     
 ]
