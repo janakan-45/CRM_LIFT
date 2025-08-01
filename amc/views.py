@@ -160,7 +160,8 @@ def export_amc_to_excel(request):
     headers = [
         'Reference ID', 'Customer ID', 'Invoice Frequency', 'AMC Type', 'Payment Terms',
         'Start Date', 'End Date', 'Equipment No', 'Notes', 'Generate Contract',
-        'No of Services', 'Price', 'No of Lifts', 'GST Percentage', 'Total', 'Status'
+        'No of Services', 'Price', 'No of Lifts', 'GST Percentage', 'Total', 'Status',
+        'AMC Service Item'  # Added new header
     ]
 
     for col_num, header in enumerate(headers, 1):
@@ -184,6 +185,7 @@ def export_amc_to_excel(request):
         ws[f"{get_column_letter(14)}{row_num}"] = float(amc.gst_percentage)
         ws[f"{get_column_letter(15)}{row_num}"] = float(amc.total)
         ws[f"{get_column_letter(16)}{row_num}"] = amc.status
+        ws[f"{get_column_letter(17)}{row_num}"] = amc.amc_service_item.name if amc.amc_service_item else ''  # Export item name
 
     output = BytesIO()
     wb.save(output)
@@ -221,7 +223,7 @@ def import_amc_csv(request):
             # Map CSV columns to AMC model fields
             # Assuming CSV order: customer_id, invoice_frequency, amc_type_name, payment_terms_name,
             # start_date, end_date, equipment_no, notes, is_generate_contract, no_of_services,
-            # price, no_of_lifts, gst_percentage
+            # price, no_of_lifts, gst_percentage, amc_service_item_name
             amc_data = {
                 'customer': CustomerSerializer().get_or_create_customer(customer_id=row[0])[0],  # Custom method to get or create customer
                 'invoice_frequency': row[1] if row[1] in ['annually', 'semi_annually', 'quarterly', 'monthly', 'weekly', 'every_other_weekly'] else 'annually',
@@ -236,6 +238,7 @@ def import_amc_csv(request):
                 'price': float(row[10]) if row[10] else 0.00,
                 'no_of_lifts': int(row[11]) if row[11] else 0,
                 'gst_percentage': float(row[12]) if row[12] else 0.00,
+                'amc_service_item': Item.objects.get_or_create(name=row[13])[0] if row[13] else None,  # Get or create item
             }
             serializer = AMCSerializer(data=amc_data)
             if serializer.is_valid():

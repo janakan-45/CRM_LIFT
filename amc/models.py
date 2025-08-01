@@ -1,6 +1,7 @@
 from django.db import models
 from sales.models import Customer  # Assuming sales app has Customer model
 from django.utils import timezone
+from authentication.models import Item   
 
 ####################################amc/models.py####################################   
 
@@ -44,6 +45,7 @@ class AMC(models.Model):
     no_of_lifts = models.IntegerField(default=0)
     gst_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, editable=False)
+    amc_service_item = models.ForeignKey(Item, on_delete=models.SET_NULL, null=True, blank=True)
     status = models.CharField(max_length=20, default='Pending')
 
     def save(self, *args, **kwargs):

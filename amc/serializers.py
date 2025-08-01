@@ -1,10 +1,10 @@
 from rest_framework import serializers
-from .models import AMC, AMCType, PaymentTerms
+from .models import AMC, AMCType, PaymentTerms, Customer
 from sales.serializers import CustomerSerializer
+from authentication.models import Item  # Import Item model
 from django.utils import timezone
 
-
-###################################amc/serializers.py###################################
+###################################amc/serializers.py#####################################
 class AMCTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = AMCType
@@ -16,10 +16,12 @@ class PaymentTermsSerializer(serializers.ModelSerializer):
         fields = ['id', 'name']
 
 class AMCSerializer(serializers.ModelSerializer):
-    customer = CustomerSerializer()  # Nested serializer for customer details
+    customer = serializers.PrimaryKeyRelatedField(queryset=Customer.objects.all(), write_only=True, allow_null=True)
     customer_id = serializers.CharField(source='customer.customer_id', read_only=True)
     amc_type_name = serializers.CharField(source='amc_type.name', read_only=True)
     payment_terms_name = serializers.CharField(source='payment_terms.name', read_only=True)
+    amc_service_item = serializers.PrimaryKeyRelatedField(queryset=Item.objects.all(), write_only=True, allow_null=True)  # For writing
+    amc_service_item_name = serializers.CharField(source='amc_service_item.name', read_only=True, allow_null=True)  # For reading (assuming Item has a 'name' field)
 
     class Meta:
         model = AMC
@@ -27,11 +29,11 @@ class AMCSerializer(serializers.ModelSerializer):
             'id', 'customer', 'customer_id', 'reference_id', 'invoice_frequency', 'amc_type', 'amc_type_name',
             'payment_terms', 'payment_terms_name', 'start_date', 'end_date', 'uploads_files', 'equipment_no',
             'notes', 'is_generate_contract', 'no_of_services', 'price', 'no_of_lifts', 'gst_percentage', 'total',
-            'status'
+            'status', 'amc_service_item', 'amc_service_item_name'
         ]
 
     def validate(self, data):
-        # Rule 1: Start date must be today (02:31 PM +0530, July 29, 2025) or later
+        # Rule 1: Start date must be today (02:31 PM +0530, August 01, 2025) or later
         today = timezone.now().date()
         if 'start_date' in data and data['start_date']:
             if data['start_date'] < today:
