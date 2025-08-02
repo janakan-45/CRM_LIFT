@@ -127,7 +127,7 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_ALLOW_ALL = True  # Consider restricting in production
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
-    "https://atom-p5tz.vercel.app/",
+    "https://atom-p5tz.vercel.app",
 ]
 CORS_ALLOW_METHODS = [
     "GET",
