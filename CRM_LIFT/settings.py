@@ -139,6 +139,7 @@ CORS_ALLOW_METHODS = [
 ]
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
+    "https://atom-p5tz.vercel.app",
 ]
 CORS_ALLOW_HEADERS = [
     'content-type',
