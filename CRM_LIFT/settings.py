@@ -127,7 +127,9 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_ALLOW_ALL = True  # Consider restricting in production
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
+    "https://ess-backend-fg6m.onrender.com",
     "https://atom-p5tz.vercel.app",
+    
 ]
 CORS_ALLOW_METHODS = [
     "GET",
@@ -139,7 +141,9 @@ CORS_ALLOW_METHODS = [
 ]
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
-    "https://atom-p5tz.vercel.app",
+    "https://ess-backend-fg6m.onrender.com",
+    "https://atom-p5tz.vercel.app"
+    
 ]
 CORS_ALLOW_HEADERS = [
     'content-type',
