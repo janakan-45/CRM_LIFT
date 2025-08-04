@@ -61,6 +61,8 @@ class Customer(models.Model):
     # Tickets field
     tickets = models.IntegerField(default=0)
 
+    uploads_files = models.FileField(upload_to='customer_uploads/', null=True, blank=True, max_length=100)
+
     def save(self, *args, **kwargs):
         if not self.reference_id:
             # Auto-generate reference_id (e.g., CUST001, CUST002, etc.)

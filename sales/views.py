@@ -197,7 +197,7 @@ def export_customers_to_excel(request):
 
     headers = [
         'Reference ID', 'Site ID', 'Site Name', 'Contact Person Name', 'Email', 'Site Address',
-        'Route', 'Branch', 'Province/State', 'Sector'
+        'Route', 'Branch', 'Province/State', 'Sector', 'Uploads Files'
     ]
 
     for col_num, header in enumerate(headers, 1):
@@ -216,6 +216,7 @@ def export_customers_to_excel(request):
         ws[f"{get_column_letter(8)}{row_num}"] = customer.branch.value if customer.branch else ''
         ws[f"{get_column_letter(9)}{row_num}"] = customer.province_state.value if customer.province_state else ''
         ws[f"{get_column_letter(10)}{row_num}"] = customer.sector
+        ws[f"{get_column_letter(11)}{row_num}"] = str(customer.uploads_files) if customer.uploads_files else ''
 
     output = BytesIO()
     wb.save(output)
@@ -228,7 +229,6 @@ def export_customers_to_excel(request):
     response.write(output.read())
 
     return response
-
 
 import csv
 import io
@@ -258,7 +258,7 @@ def import_customers_csv(request):
             # Map CSV columns to Customer model fields
             # Assuming CSV order: site_id, job_no, site_name, site_address, email, phone, office_address,
             # contact_person_name, designation, pin_code, country, province_state_value, city, sector,
-            # routes_value, branch_value, handover_date, billing_name, pan_number, gst_number
+            # routes_value, branch_value, handover_date, billing_name, pan_number, gst_number, uploads_files
             customer_data = {
                 'site_id': row[0] if row[0] else '',
                 'job_no': row[1] if row[1] else '',
@@ -288,6 +288,7 @@ def import_customers_csv(request):
                 'due_services': int(row[25]) if row[25] else 0,
                 'overdue_services': int(row[26]) if row[26] else 0,
                 'tickets': int(row[27]) if row[27] else 0,
+                'uploads_files': row[28] if row[28] else None,
             }
             serializer = CustomerSerializer(data=customer_data)
             if serializer.is_valid():
@@ -299,8 +300,6 @@ def import_customers_csv(request):
 
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
 ###########################################quotation###################################3
 
 

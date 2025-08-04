@@ -36,7 +36,7 @@ class CustomerSerializer(serializers.ModelSerializer):
             'branch_value', 'handover_date', 'billing_name', 'pan_number', 'gst_number',
             'routes', 'branch', 'province_state',
             'active_mobile', 'expired_mobile', 'contracts', 'no_of_lifts',
-            'completed_services', 'due_services', 'overdue_services', 'tickets'
+            'completed_services', 'due_services', 'overdue_services', 'tickets','uploads_files'
         ]
 
     def get_routes_value(self, obj):
