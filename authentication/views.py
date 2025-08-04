@@ -26,16 +26,15 @@ def register(request):
         }, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login(request):
     serializer = UserLoginSerializer(data=request.data)
     if serializer.is_valid():
-        username = serializer.validated_data['username']
+        email = serializer.validated_data['email']
         password = serializer.validated_data['password']
-        user = authenticate(username=username, password=password)
-        print(username, password, user)
+        # Authenticate using email
+        user = authenticate(email=email, password=password)
         if user:
             refresh = RefreshToken.for_user(user)
             return Response({

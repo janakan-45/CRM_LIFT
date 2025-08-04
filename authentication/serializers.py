@@ -19,18 +19,12 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         }
 
     def validate(self, data):
-        # Check if passwords match
         if data['password'] != data['password_confirm']:
             raise serializers.ValidationError({"password": "Passwords must match."})
-
-        # Check for existing username
         if User.objects.filter(username__iexact=data['username']).exists():
             raise serializers.ValidationError({"username": "A user with this username already exists."})
-
-        # Check for existing email
         if User.objects.filter(email__iexact=data['email']).exists():
             raise serializers.ValidationError({"email": "A user with this email already exists."})
-
         return data
 
     def create(self, validated_data):
@@ -43,7 +37,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return user
 
 class UserLoginSerializer(serializers.Serializer):
-    username = serializers.CharField(required=True)
+    email = serializers.EmailField(required=True)
     password = serializers.CharField(write_only=True, required=True)
 
 
