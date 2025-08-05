@@ -27,7 +27,7 @@ class AMCSerializer(serializers.ModelSerializer):
         model = AMC
         fields = [
             'id', 'customer', 'customer_id', 'reference_id', 'invoice_frequency', 'amc_type', 'amc_type_name',
-            'payment_terms', 'payment_terms_name', 'start_date', 'end_date', 'uploads_files', 'equipment_no',
+            'payment_terms', 'payment_terms_name', 'start_date', 'end_date', 'equipment_no',
             'notes', 'is_generate_contract', 'no_of_services', 'price', 'no_of_lifts', 'gst_percentage', 'total',
             'status', 'amc_service_item', 'amc_service_item_name'
         ]

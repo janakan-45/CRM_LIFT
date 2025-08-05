@@ -36,7 +36,7 @@ class AMC(models.Model):
     payment_terms = models.ForeignKey(PaymentTerms, on_delete=models.SET_NULL, null=True, blank=True)
     start_date = models.DateField()
     end_date = models.DateField()
-    uploads_files = models.FileField(upload_to='amc_uploads/', null=True, blank=True, max_length=100)
+    #uploads_files = models.FileField(upload_to='amc_uploads/', null=True, blank=True, max_length=100)
     equipment_no = models.CharField(max_length=50, blank=True)
     notes = models.TextField(blank=True)
     is_generate_contract = models.BooleanField(default=False)

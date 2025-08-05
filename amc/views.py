@@ -161,7 +161,7 @@ def export_amc_to_excel(request):
         'Reference ID', 'Customer ID', 'Invoice Frequency', 'AMC Type', 'Payment Terms',
         'Start Date', 'End Date', 'Equipment No', 'Notes', 'Generate Contract',
         'No of Services', 'Price', 'No of Lifts', 'GST Percentage', 'Total', 'Status',
-        'AMC Service Item'  # Added new header
+        'AMC Service Item'
     ]
 
     for col_num, header in enumerate(headers, 1):
@@ -185,7 +185,7 @@ def export_amc_to_excel(request):
         ws[f"{get_column_letter(14)}{row_num}"] = float(amc.gst_percentage)
         ws[f"{get_column_letter(15)}{row_num}"] = float(amc.total)
         ws[f"{get_column_letter(16)}{row_num}"] = amc.status
-        ws[f"{get_column_letter(17)}{row_num}"] = amc.amc_service_item.name if amc.amc_service_item else ''  # Export item name
+        ws[f"{get_column_letter(17)}{row_num}"] = amc.amc_service_item.name if amc.amc_service_item else ''
 
     output = BytesIO()
     wb.save(output)
