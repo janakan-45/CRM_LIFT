@@ -815,8 +815,8 @@ def export_items_to_excel(request):
 
     headers = [
         'Item Number', 'Name', 'Make', 'Model', 'Type', 'Capacity', 'Threshold Qty',
-        'Sale Price', 'Purchase Price', 'Service Type', 'Tax Preference', 'Unit',
-        'SAC Code', 'HSN/HAC Code', 'IGST', 'GST', 'Description'
+        'Sale Price', 'Service Type', 'Tax Preference', 'Unit',
+        'SAC Code', 'IGST', 'GST', 'Description'
     ]
 
     for col_num, header in enumerate(headers, 1):
@@ -833,15 +833,13 @@ def export_items_to_excel(request):
         ws[f"{get_column_letter(6)}{row_num}"] = item.capacity
         ws[f"{get_column_letter(7)}{row_num}"] = item.threshold_qty
         ws[f"{get_column_letter(8)}{row_num}"] = float(item.sale_price)
-        ws[f"{get_column_letter(9)}{row_num}"] = float(item.purchase_price)
-        ws[f"{get_column_letter(10)}{row_num}"] = item.service_type
-        ws[f"{get_column_letter(11)}{row_num}"] = item.tax_preference
-        ws[f"{get_column_letter(12)}{row_num}"] = item.unit.value if item.unit else ''
-        ws[f"{get_column_letter(13)}{row_num}"] = item.sac_code if item.sac_code else ''
-        ws[f"{get_column_letter(14)}{row_num}"] = item.hsn_hac_code if item.hsn_hac_code else ''
-        ws[f"{get_column_letter(15)}{row_num}"] = float(item.igst) if item.igst else ''
-        ws[f"{get_column_letter(16)}{row_num}"] = float(item.gst) if item.gst else ''
-        ws[f"{get_column_letter(17)}{row_num}"] = item.description
+        ws[f"{get_column_letter(9)}{row_num}"] = item.service_type
+        ws[f"{get_column_letter(10)}{row_num}"] = item.tax_preference
+        ws[f"{get_column_letter(11)}{row_num}"] = item.unit.value if item.unit else ''
+        ws[f"{get_column_letter(12)}{row_num}"] = item.sac_code if item.sac_code else ''
+        ws[f"{get_column_letter(13)}{row_num}"] = float(item.igst) if item.igst else ''
+        ws[f"{get_column_letter(14)}{row_num}"] = float(item.gst) if item.gst else ''
+        ws[f"{get_column_letter(15)}{row_num}"] = item.description
 
     output = BytesIO()
     wb.save(output)
@@ -878,9 +876,10 @@ def import_items_csv(request):
 
             # Map CSV columns to Item model fields
             # Assuming CSV order: item_number, name, make_value, model, type_value, capacity,
-            # threshold_qty, sale_price, purchase_price, service_type, tax_preference, unit_value,
-            # sac_code, hsn_hac_code, igst, gst, description
+            # threshold_qty, sale_price, service_type, tax_preference, unit_value,
+            # sac_code, igst, gst, description
             item_data = {
+                'item_number': row[0],
                 'name': row[1],
                 'make': Make.objects.get_or_create(value=row[2])[0],
                 'model': row[3],
@@ -888,15 +887,13 @@ def import_items_csv(request):
                 'capacity': row[5],
                 'threshold_qty': int(row[6]) if row[6] else 0,
                 'sale_price': float(row[7]) if row[7] else 0.00,
-                'purchase_price': float(row[8]) if row[8] else 0.00,
-                'service_type': row[9] if row[9] in ['Services', 'Goods'] else 'Goods',
-                'tax_preference': row[10] if row[10] in ['Non-Taxable', 'Taxable'] else 'Non-Taxable',
-                'unit': Unit.objects.get_or_create(value=row[11])[0],
-                'sac_code': row[12] if row[12] else None,
-                'hsn_hac_code': row[13] if row[13] else None,
-                'igst': float(row[14]) if row[14] else None,
-                'gst': float(row[15]) if row[15] else None,
-                'description': row[16] if row[16] else None,
+                'service_type': row[8] if row[8] in ['Services', 'Goods'] else 'Goods',
+                'tax_preference': row[9] if row[9] in ['Non-Taxable', 'Taxable'] else 'Non-Taxable',
+                'unit': Unit.objects.get_or_create(value=row[10])[0],
+                'sac_code': row[11] if row[11] else None,
+                'igst': float(row[12]) if row[12] else None,
+                'gst': float(row[13]) if row[13] else None,
+                'description': row[14] if row[14] else None,
             }
             serializer = ItemSerializer(data=item_data)
             if serializer.is_valid():
@@ -908,6 +905,7 @@ def import_items_csv(request):
 
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 

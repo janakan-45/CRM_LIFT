@@ -185,8 +185,8 @@ class ItemSerializer(serializers.ModelSerializer):
         model = Item
         fields = [
             'id', 'item_number', 'name', 'make_value', 'model', 'type_value', 'capacity',
-            'threshold_qty', 'sale_price', 'purchase_price', 'service_type', 'tax_preference',
-            'unit_value', 'sac_code', 'hsn_hac_code', 'igst', 'gst', 'description',
+            'threshold_qty', 'sale_price', 'service_type', 'tax_preference',
+            'unit_value', 'sac_code', 'igst', 'gst', 'description',
             'make', 'type', 'unit'
         ]
 
@@ -200,12 +200,12 @@ class ItemSerializer(serializers.ModelSerializer):
         return obj.unit.value if obj.unit else None
 
     def validate(self, data):
-        if data['service_type'] == 'Goods' and not data.get('hsn_hac_code'):
-            raise serializers.ValidationError("HSN/HAC Code is required for Goods.")
+        if data['service_type'] == 'Goods' and not data.get('item_number'):
+            raise serializers.ValidationError({"item_number": "Part No is required for Goods."})
         if data['service_type'] == 'Services' and data['tax_preference'] == 'Taxable' and not (data.get('igst') or data.get('gst')):
-            raise serializers.ValidationError("IGST or GST is required for Taxable Services.")
+            raise serializers.ValidationError({"tax": "IGST or GST is required for Taxable Services."})
         if data['service_type'] == 'Services' and data['tax_preference'] == 'Non-Taxable' and (data.get('igst') or data.get('gst')):
-            raise serializers.ValidationError("IGST and GST should not be set for Non-Taxable Services.")
+            raise serializers.ValidationError({"tax": "IGST and GST should not be set for Non-Taxable Services."})
         return data
 
     def create(self, validated_data):
@@ -218,7 +218,7 @@ class ItemSerializer(serializers.ModelSerializer):
             validated_data.pop('igst', None)
             validated_data.pop('gst', None)
         return super().create(validated_data)
-    
+
 
 
 
