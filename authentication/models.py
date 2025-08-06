@@ -124,7 +124,7 @@ class Item(models.Model):
     def save(self, *args, **kwargs):
         if not self.item_number:
             last_item = Item.objects.all().order_by('id').last()
-            self.item_number = f'ITEM{str(1000 + (last_item.id + 1) if last_item else 1001)}'
+            self.item_number = f'PART{str(1000 + (last_item.id + 1) if last_item else 1001)}'
         super().save(*args, **kwargs)
 
     def __str__(self):

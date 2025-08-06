@@ -189,6 +189,9 @@ class ItemSerializer(serializers.ModelSerializer):
             'unit_value', 'sac_code', 'igst', 'gst', 'description',
             'make', 'type', 'unit'
         ]
+        extra_kwargs = {
+            'item_number': {'read_only': True},  # Mark item_number as read-only since it's auto-generated
+        }
 
     def get_make_value(self, obj):
         return obj.make.value if obj.make else None
@@ -200,8 +203,6 @@ class ItemSerializer(serializers.ModelSerializer):
         return obj.unit.value if obj.unit else None
 
     def validate(self, data):
-        if data['service_type'] == 'Goods' and not data.get('item_number'):
-            raise serializers.ValidationError({"item_number": "Part No is required for Goods."})
         if data['service_type'] == 'Services' and data['tax_preference'] == 'Taxable' and not (data.get('igst') or data.get('gst')):
             raise serializers.ValidationError({"tax": "IGST or GST is required for Taxable Services."})
         if data['service_type'] == 'Services' and data['tax_preference'] == 'Non-Taxable' and (data.get('igst') or data.get('gst')):
@@ -218,7 +219,6 @@ class ItemSerializer(serializers.ModelSerializer):
             validated_data.pop('igst', None)
             validated_data.pop('gst', None)
         return super().create(validated_data)
-
 
 
 
