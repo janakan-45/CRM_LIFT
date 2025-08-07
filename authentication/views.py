@@ -5,11 +5,19 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from .models import Lift, FloorID, Brand, MachineType, MachineBrand, DoorType, DoorBrand, LiftType, ControllerBrand, Cabin, Type, Make, Unit, Item,Complaint, Employee
-from .serializers import LiftSerializer, FloorIDSerializer, BrandSerializer, MachineTypeSerializer, MachineBrandSerializer, DoorTypeSerializer, DoorBrandSerializer, LiftTypeSerializer, ControllerBrandSerializer, CabinSerializer, TypeSerializer, MakeSerializer, UnitSerializer, ItemSerializer, UserRegistrationSerializer, UserLoginSerializer,ComplaintSerializer, EmployeeSerializer
+from .serializers import LiftSerializer, FloorIDSerializer, BrandSerializer, MachineTypeSerializer, MachineBrandSerializer, DoorTypeSerializer, DoorBrandSerializer, LiftTypeSerializer, ControllerBrandSerializer, CabinSerializer, TypeSerializer, MakeSerializer, UnitSerializer, ItemSerializer, UserRegistrationSerializer, UserLoginSerializer,ComplaintSerializer, EmployeeSerializer,ResetPasswordSerializer,ForgotPasswordSerializer
 from django.http import HttpResponse
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
 from io import BytesIO
+from django.core.mail import send_mail
+from django.conf import settings
+from datetime import datetime
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.contrib.auth import get_user_model
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes
+User = get_user_model()
 
 
 @api_view(['POST'])
@@ -19,11 +27,40 @@ def register(request):
     if serializer.is_valid():
         user = serializer.save()
         refresh = RefreshToken.for_user(user)
+
+        # Send confirmation email
+        subject = 'Welcome to ATOM LIFT - Registration Successful'
+        message = (
+            f"Dear {user.username},\n\n"
+            "Thank you for registering with ATOM LIFT!\n"
+            "Your account has been successfully created.\n\n"
+            "You can now log in using your email and password.\n"
+            "If you have any questions, feel free to contact us.\n\n"
+            "Best regards,\n"
+            "The ATOM LIFT Team"
+        )
+        from_email = f"{settings.EMAIL_SENDER_NAME} <{settings.EMAIL_HOST_USER}>"
+        recipient_list = [user.email]
+
+        try:
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=from_email,
+                recipient_list=recipient_list,
+                fail_silently=False,
+            )
+        except Exception as e:
+            # Log the error if needed, but don't fail the registration
+            print(f"Failed to send email: {str(e)}")
+
         return Response({
             'refresh': str(refresh),
             'access': str(refresh.access_token),
-            'user': serializer.data
+            'user': serializer.data,
+            'message': 'Registration successful! A confirmation email has been sent to your email address.'
         }, status=status.HTTP_201_CREATED)
+    
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
@@ -37,6 +74,33 @@ def login(request):
         user = authenticate(email=email, password=password)
         if user:
             refresh = RefreshToken.for_user(user)
+
+            # Send login notification email
+            login_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S %Z')
+            subject = 'ATOM LIFT - Successful Login Notification'
+            message = (
+                f"Dear {user.username},\n\n"
+                "You have successfully logged in to your ATOM LIFT account.\n\n"
+                f"Login Time: {login_time}\n"
+                "If this was not you, please secure your account immediately by changing your password.\n\n"
+                "Best regards,\n"
+                "The ATOM LIFT Team"
+            )
+            from_email = f"{settings.EMAIL_SENDER_NAME} <{settings.EMAIL_HOST_USER}>"
+            recipient_list = [user.email]
+
+            try:
+                send_mail(
+                    subject=subject,
+                    message=message,
+                    from_email=from_email,
+                    recipient_list=recipient_list,
+                    fail_silently=False,
+                )
+            except Exception as e:
+                # Log the error if needed, but don't fail the login
+                print(f"Failed to send login email: {str(e)}")
+
             return Response({
                 'refresh': str(refresh),
                 'access': str(refresh.access_token),
@@ -44,9 +108,84 @@ def login(request):
                     'id': user.id,
                     'email': user.email,
                     'username': user.username,
-                }
+                },
+                'message': 'Login successful! A notification email has been sent to your email address.'
             }, status=status.HTTP_200_OK)
         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def forgot_password(request):
+    serializer = ForgotPasswordSerializer(data=request.data)
+    if serializer.is_valid():
+        email = serializer.validated_data['email']
+        user = User.objects.get(email__iexact=email)
+        token_generator = PasswordResetTokenGenerator()
+        token = token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        
+        # Construct reset link (adjust the frontend URL as needed)
+        reset_url = f"{settings.FRONTEND_URL}/reset-password/{uid}/{token}/"
+        
+        # Send password reset email
+        subject = 'ATOM LIFT - Password Reset Request'
+        message = (
+            f"Dear {user.username},\n\n"
+            "You have requested to reset your password for your ATOM LIFT account.\n"
+            f"Please click the following link to reset your password:\n\n"
+            f"{reset_url}\n\n"
+            "This link is valid for 1 hour. If you did not request a password reset, please ignore this email.\n\n"
+            "Best regards,\n"
+            "The ATOM LIFT Team"
+        )
+        from_email = f"{settings.EMAIL_SENDER_NAME} <{settings.EMAIL_HOST_USER}>"
+        recipient_list = [user.email]
+
+        try:
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=from_email,
+                recipient_list=recipient_list,
+                fail_silently=False,
+            )
+        except Exception as e:
+            print(f"Failed to send password reset email: {str(e)}")
+            return Response({'error': 'Failed to send password reset email.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({
+            'message': 'Password reset email sent successfully.'
+        }, status=status.HTTP_200_OK)
+    
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def reset_password(request):
+    serializer = ResetPasswordSerializer(data=request.data)
+    if serializer.is_valid():
+        uid = serializer.validated_data['uid']
+        token = serializer.validated_data['token']
+        password = serializer.validated_data['password']
+        
+        try:
+            from django.utils.http import urlsafe_base64_decode
+            user_id = urlsafe_base64_decode(uid).decode()
+            user = User.objects.get(pk=user_id)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            return Response({'error': 'Invalid user ID.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        token_generator = PasswordResetTokenGenerator()
+        if token_generator.check_token(user, token):
+            user.set_password(password)
+            user.save()
+            return Response({
+                'message': 'Password reset successfully.'
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'Invalid or expired token.'}, status=status.HTTP_400_BAD_REQUEST)
+    
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

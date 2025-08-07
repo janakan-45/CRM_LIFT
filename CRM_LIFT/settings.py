@@ -198,3 +198,17 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
     'authentication.auth_backends.EmailBackend',  # Add custom email backend
 ]
+
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "sakthiveljanakan@gmail.com"
+EMAIL_HOST_PASSWORD = "egqmooixwvnswwrv "  
+
+EMAIL_SENDER_NAME = "ATOM LIFT"
+
+
+# In settings.py
+FRONTEND_URL = "http://localhost:5173"  # Replace with your actual frontend URL (e.g., production URL)
