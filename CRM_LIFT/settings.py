@@ -142,7 +142,7 @@ CORS_ALLOW_METHODS = [
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "https://ess-backend-fg6m.onrender.com",
-    "https://atom-eight-umber.vercel.app"
+    "https://atom-eight-umber.vercel.app/"
     
 ]
 CORS_ALLOW_HEADERS = [
@@ -211,8 +211,8 @@ EMAIL_SENDER_NAME = "ATOM LIFT"
 
 
 # In settings.py
-FRONTEND_URLS = [
-    "http://localhost:5173",
-    "https://atom-eight-umber.vercel.app",
-]
+FRONTEND_URLS =  "https://atom-eight-umber.vercel.app"
+    
+    
+
   # Replace with your actual frontend URL (e.g., production URL)
