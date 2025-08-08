@@ -128,7 +128,7 @@ CORS_ORIGIN_ALLOW_ALL = True  # Consider restricting in production
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "https://ess-backend-fg6m.onrender.com",
-    "https://atom-p5tz.vercel.app",
+    "https://atom-eight-umber.vercel.app",
     
 ]
 CORS_ALLOW_METHODS = [
@@ -142,7 +142,7 @@ CORS_ALLOW_METHODS = [
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "https://ess-backend-fg6m.onrender.com",
-    "https://atom-p5tz.vercel.app"
+    "https://atom-eight-umber.vercel.app"
     
 ]
 CORS_ALLOW_HEADERS = [
@@ -211,4 +211,8 @@ EMAIL_SENDER_NAME = "ATOM LIFT"
 
 
 # In settings.py
-FRONTEND_URL = "http://localhost:5173"  # Replace with your actual frontend URL (e.g., production URL)
+FRONTEND_URLS = [
+    "http://localhost:5173",
+    "https://atom-eight-umber.vercel.app",
+]
+  # Replace with your actual frontend URL (e.g., production URL)
