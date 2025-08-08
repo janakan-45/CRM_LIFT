@@ -1,10 +1,12 @@
 from rest_framework import serializers
-from .models import AMC, AMCType, PaymentTerms, Customer
+from .models import AMC, AMCType, PaymentTerms
+from sales.models import Customer
 from sales.serializers import CustomerSerializer
-from authentication.models import Item  # Import Item model
+from authentication.models import Item
 from django.utils import timezone
 
 ###################################amc/serializers.py#####################################
+
 class AMCTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = AMCType
@@ -16,24 +18,28 @@ class PaymentTermsSerializer(serializers.ModelSerializer):
         fields = ['id', 'name']
 
 class AMCSerializer(serializers.ModelSerializer):
-    customer = serializers.PrimaryKeyRelatedField(queryset=Customer.objects.all(), write_only=True, allow_null=True)
-    customer_id = serializers.CharField(source='customer.customer_id', read_only=True)
+    customer = serializers.PrimaryKeyRelatedField(queryset=Customer.objects.all(), write_only=True)
+    customer_name = serializers.CharField(source='customer.site_name', read_only=True)
+    customer_id = serializers.IntegerField(source='customer.id', read_only=True)
     amc_type_name = serializers.CharField(source='amc_type.name', read_only=True)
     payment_terms_name = serializers.CharField(source='payment_terms.name', read_only=True)
-    amc_service_item = serializers.PrimaryKeyRelatedField(queryset=Item.objects.all(), write_only=True, allow_null=True)  # For writing
-    amc_service_item_name = serializers.CharField(source='amc_service_item.name', read_only=True, allow_null=True)  # For reading (assuming Item has a 'name' field)
+    amc_service_item_name = serializers.CharField(source='amc_service_item.name', read_only=True)
 
     class Meta:
         model = AMC
         fields = [
-            'id', 'customer', 'customer_id', 'reference_id', 'invoice_frequency', 'amc_type', 'amc_type_name',
-            'payment_terms', 'payment_terms_name', 'start_date', 'end_date', 'equipment_no',
-            'notes', 'is_generate_contract', 'no_of_services', 'price', 'no_of_lifts', 'gst_percentage', 'total',
-            'status', 'amc_service_item', 'amc_service_item_name'
+            'id', 'customer', 'customer_id', 'customer_name', 
+            'reference_id', 'amc_name', 'invoice_frequency', 
+            'amc_type', 'amc_type_name', 'payment_terms', 
+            'payment_terms_name', 'start_date', 'end_date', 
+            'equipment_no', 'notes', 'is_generate_contract',
+            'no_of_services', 'price', 'no_of_lifts', 
+            'gst_percentage', 'total', 'status', 
+            'amc_service_item', 'amc_service_item_name'
         ]
 
     def validate(self, data):
-        # Rule 1: Start date must be today (02:31 PM +0530, August 01, 2025) or later
+        # Rule 1: Start date must be today or later
         today = timezone.now().date()
         if 'start_date' in data and data['start_date']:
             if data['start_date'] < today:
@@ -69,21 +75,20 @@ class AMCSerializer(serializers.ModelSerializer):
                 "gst_percentage": "GST percentage cannot be negative."
             })
 
+        # Ensure customer is valid
+        if 'customer' not in data or data['customer'] is None:
+            raise serializers.ValidationError({
+                "customer": "A valid customer is required."
+            })
+
         return data
 
     def create(self, validated_data):
-        customer_data = validated_data.pop('customer')
-        customer_serializer = CustomerSerializer(data=customer_data)
-        if customer_serializer.is_valid():
-            customer = customer_serializer.save()
-            validated_data['customer'] = customer
-        amc = AMC.objects.create(**validated_data)
-        return amc
+     customer = validated_data.pop('customer')
+     return AMC.objects.create(customer=customer, **validated_data)
 
     def update(self, instance, validated_data):
-        customer_data = validated_data.pop('customer', None)
-        if customer_data:
-            customer_serializer = CustomerSerializer(instance.customer, data=customer_data)
-            if customer_serializer.is_valid():
-                customer_serializer.save()
-        return super().update(instance, validated_data)
+     customer_data = validated_data.pop('customer', None)
+     if customer_data:
+        instance.customer = customer_data
+     return super().update(instance, validated_data)

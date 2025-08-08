@@ -20,6 +20,7 @@ class PaymentTerms(models.Model):
 class AMC(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     reference_id = models.CharField(max_length=10, unique=True, editable=False)
+    amc_name = models.CharField(max_length=100, blank=True)  # New field for AMC name
     invoice_frequency = models.CharField(
         max_length=20,
         choices=[
@@ -47,6 +48,7 @@ class AMC(models.Model):
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, editable=False)
     amc_service_item = models.ForeignKey(Item, on_delete=models.SET_NULL, null=True, blank=True)
     status = models.CharField(max_length=20, default='Pending')
+    
 
     def save(self, *args, **kwargs):
         if not self.reference_id:

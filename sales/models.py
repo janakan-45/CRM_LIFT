@@ -74,8 +74,10 @@ class Customer(models.Model):
                 self.reference_id = 'CUST001'
         super().save(*args, **kwargs)
 
-    def __str__(self):
-        return self.reference_id
+    @property
+    def customer_id(self):
+        """Backward compatible property to return the id"""
+        return self.id
     
 
 
