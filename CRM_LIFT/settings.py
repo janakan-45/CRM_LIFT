@@ -211,7 +211,7 @@ EMAIL_SENDER_NAME = "ATOM LIFT"
 
 
 # In settings.py
-FRONTEND_URLS =  "https://atom-eight-umber.vercel.app"
+FRONTEND_URL = "https://atom-eight-umber.vercel.app"
     
     
 
