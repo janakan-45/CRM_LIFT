@@ -148,8 +148,6 @@ def amc_list(request):
     serializer = AMCSerializer(amcs, many=True)
     return Response(serializer.data)
 
-
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def export_amc_to_excel(request):
@@ -160,7 +158,8 @@ def export_amc_to_excel(request):
     headers = [
         'Reference ID', 'Customer ID', 'Invoice Frequency', 'AMC Type', 'Payment Terms',
         'Start Date', 'End Date', 'Equipment No', 'Notes', 'Generate Contract',
-        'No of Services', 'Price', 'No of Lifts', 'GST Percentage', 'Total', 'Status',
+        'No of Services', 'Price', 'No of Lifts', 'GST Percentage', 'Total',
+        'Contract Amount', 'Total Amount Paid', 'Amount Due', 'Status',
         'AMC Service Item'
     ]
 
@@ -184,8 +183,11 @@ def export_amc_to_excel(request):
         ws[f"{get_column_letter(13)}{row_num}"] = amc.no_of_lifts
         ws[f"{get_column_letter(14)}{row_num}"] = float(amc.gst_percentage)
         ws[f"{get_column_letter(15)}{row_num}"] = float(amc.total)
-        ws[f"{get_column_letter(16)}{row_num}"] = amc.status
-        ws[f"{get_column_letter(17)}{row_num}"] = amc.amc_service_item.name if amc.amc_service_item else ''
+        ws[f"{get_column_letter(16)}{row_num}"] = float(amc.contract_amount)
+        ws[f"{get_column_letter(17)}{row_num}"] = float(amc.total_amount_paid)
+        ws[f"{get_column_letter(18)}{row_num}"] = float(amc.amount_due)
+        ws[f"{get_column_letter(19)}{row_num}"] = amc.status
+        ws[f"{get_column_letter(20)}{row_num}"] = amc.amc_service_item.name if amc.amc_service_item else ''
 
     output = BytesIO()
     wb.save(output)
@@ -238,7 +240,7 @@ def import_amc_csv(request):
                 'price': float(row[10]) if row[10] else 0.00,
                 'no_of_lifts': int(row[11]) if row[11] else 0,
                 'gst_percentage': float(row[12]) if row[12] else 0.00,
-                'amc_service_item': Item.objects.get_or_create(name=row[13])[0] if row[13] else None,  # Get or create item
+                'amc_service_item': Item.objects.get_or_create(name=row[13])[0] if row[13] else None,
             }
             serializer = AMCSerializer(data=amc_data)
             if serializer.is_valid():

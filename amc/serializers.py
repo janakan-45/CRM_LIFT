@@ -34,7 +34,8 @@ class AMCSerializer(serializers.ModelSerializer):
             'payment_terms_name', 'start_date', 'end_date', 
             'equipment_no', 'notes', 'is_generate_contract',
             'no_of_services', 'price', 'no_of_lifts', 
-            'gst_percentage', 'total', 'status', 
+            'gst_percentage', 'total', 'contract_amount', 
+            'total_amount_paid', 'amount_due', 'status', 
             'amc_service_item', 'amc_service_item_name'
         ]
 
@@ -84,11 +85,11 @@ class AMCSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-     customer = validated_data.pop('customer')
-     return AMC.objects.create(customer=customer, **validated_data)
+        customer = validated_data.pop('customer')
+        return AMC.objects.create(customer=customer, **validated_data)
 
     def update(self, instance, validated_data):
-     customer_data = validated_data.pop('customer', None)
-     if customer_data:
-        instance.customer = customer_data
-     return super().update(instance, validated_data)
+        customer_data = validated_data.pop('customer', None)
+        if customer_data:
+            instance.customer = customer_data
+        return super().update(instance, validated_data)
