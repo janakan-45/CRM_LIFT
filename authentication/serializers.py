@@ -266,4 +266,4 @@ class ComplaintSerializer(serializers.ModelSerializer):
         return obj.assign_to.name if obj.assign_to else None
 
     def get_customer_name(self, obj):
-        return obj.customer.name if obj.customer else None
+        return obj.customer.site_name if obj.customer else None

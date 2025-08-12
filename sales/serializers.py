@@ -74,7 +74,7 @@ class QuotationSerializer(serializers.ModelSerializer):
         ]
 
     def get_customer_name(self, obj):
-        return obj.customer.name if obj.customer else None
+        return obj.customer.site_name if obj.customer else None
 
     def get_amc_type_name(self, obj):
         return obj.amc_type.name if obj.amc_type else None
