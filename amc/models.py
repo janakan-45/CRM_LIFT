@@ -51,6 +51,7 @@ class AMC(models.Model):
     amount_due = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, editable=False)
     amc_service_item = models.ForeignKey(Item, on_delete=models.SET_NULL, null=True, blank=True)
     status = models.CharField(max_length=20, default='Pending')
+    created = models.DateTimeField(auto_now_add=True)
     
 
     def save(self, *args, **kwargs):

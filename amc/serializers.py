@@ -24,6 +24,7 @@ class AMCSerializer(serializers.ModelSerializer):
     amc_type_name = serializers.CharField(source='amc_type.name', read_only=True)
     payment_terms_name = serializers.CharField(source='payment_terms.name', read_only=True)
     amc_service_item_name = serializers.CharField(source='amc_service_item.name', read_only=True)
+    created_display = serializers.SerializerMethodField()
 
     class Meta:
         model = AMC
@@ -36,7 +37,7 @@ class AMCSerializer(serializers.ModelSerializer):
             'no_of_services', 'price', 'no_of_lifts', 
             'gst_percentage', 'total', 'contract_amount', 
             'total_amount_paid', 'amount_due', 'status', 
-            'amc_service_item', 'amc_service_item_name'
+            'amc_service_item', 'amc_service_item_name','created','created_display'
         ]
 
     def validate(self, data):
@@ -93,3 +94,7 @@ class AMCSerializer(serializers.ModelSerializer):
         if customer_data:
             instance.customer = customer_data
         return super().update(instance, validated_data)
+    
+
+    def get_created_display(self, obj):
+        return obj.created.strftime("%d-%m-%Y %H:%M")  # Format: 31-12-2023 14:30
