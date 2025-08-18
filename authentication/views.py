@@ -18,7 +18,38 @@ from django.contrib.auth import get_user_model
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes
 User = get_user_model()
+from django.contrib.auth.models import Group
+from rest_framework.permissions import BasePermission
 
+
+class IsOwner(BasePermission):
+    def has_permission(self, request, view):
+        return request.user and request.user.groups.filter(name='owner').exists()
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsOwner])
+def check_owner_status(request):
+    user = request.user
+    return Response({
+        'message': f'User {user.username} is an owner',
+        'is_owner': True
+    }, status=status.HTTP_200_OK)
+
+
+class IsEmployee(BasePermission):
+    def has_permission(self, request, view):
+        return request.user and request.user.groups.filter(name='employee').exists()
+    
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsEmployee])
+def check_employee_status(request):
+    user = request.user
+    return Response({
+        'message': f'User {user.username} is an employee',
+        'is_employee': True
+    }, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -26,6 +57,13 @@ def register(request):
     serializer = UserRegistrationSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
+        
+        # Check if owner group exists, create if it doesn't
+        owner_group, created = Group.objects.get_or_create(name='owner')
+        
+        # Assign user to owner group
+        user.groups.add(owner_group)
+        
         refresh = RefreshToken.for_user(user)
 
         # Send confirmation email
@@ -33,7 +71,7 @@ def register(request):
         message = (
             f"Dear {user.username},\n\n"
             "Thank you for registering with ATOM LIFT!\n"
-            "Your account has been successfully created.\n\n"
+            "Your account has been successfully created with owner privileges.\n\n"
             "You can now log in using your email and password.\n"
             "If you have any questions, feel free to contact us.\n\n"
             "Best regards,\n"
@@ -75,6 +113,9 @@ def login(request):
         if user:
             refresh = RefreshToken.for_user(user)
 
+            # Get the user's group(s)
+            groups = [group.name for group in user.groups.all()]
+
             # Send login notification email
             login_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S %Z')
             subject = 'ATOM LIFT - Successful Login Notification'
@@ -108,12 +149,12 @@ def login(request):
                     'id': user.id,
                     'email': user.email,
                     'username': user.username,
+                    'groups': groups,  # Include the user's group(s)
                 },
                 'message': 'Login successful! A notification email has been sent to your email address.'
             }, status=status.HTTP_200_OK)
         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def forgot_password(request):
@@ -192,7 +233,7 @@ def reset_password(request):
 ############################ Lift ######################################
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def add_floor_id(request):
     serializer = FloorIDSerializer(data=request.data)
     if serializer.is_valid():
@@ -201,7 +242,7 @@ def add_floor_id(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def edit_floor_id(request, pk):
     try:
         floor_id = FloorID.objects.get(pk=pk)
@@ -217,7 +258,7 @@ def edit_floor_id(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def delete_floor_id(request, pk):
     try:
         floor_id = FloorID.objects.get(pk=pk)
@@ -230,7 +271,7 @@ def delete_floor_id(request, pk):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def add_brand(request):
     serializer = BrandSerializer(data=request.data)
     if serializer.is_valid():
@@ -240,7 +281,7 @@ def add_brand(request):
 
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def edit_brand(request, pk):
     try:
         brand = Brand.objects.get(pk=pk)
@@ -256,7 +297,7 @@ def edit_brand(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def delete_brand(request, pk):
     try:
         brand = Brand.objects.get(pk=pk)
@@ -269,7 +310,7 @@ def delete_brand(request, pk):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def add_machine_type(request):
     serializer = MachineTypeSerializer(data=request.data)
     if serializer.is_valid():
@@ -279,7 +320,7 @@ def add_machine_type(request):
 
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def edit_machine_type(request, pk):
     try:
         machine_type = MachineType.objects.get(pk=pk)
@@ -295,7 +336,7 @@ def edit_machine_type(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def delete_machine_type(request, pk):
     try:
         machine_type = MachineType.objects.get(pk=pk)
@@ -307,7 +348,7 @@ def delete_machine_type(request, pk):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def add_machine_brand(request):
     serializer = MachineBrandSerializer(data=request.data)
     if serializer.is_valid():
@@ -316,7 +357,7 @@ def add_machine_brand(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def edit_machine_brand(request, pk):
     try:
         machine_brand = MachineBrand.objects.get(pk=pk)
@@ -332,7 +373,7 @@ def edit_machine_brand(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def delete_machine_brand(request, pk):
     try:
         machine_brand = MachineBrand.objects.get(pk=pk)
@@ -344,7 +385,7 @@ def delete_machine_brand(request, pk):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def add_door_type(request):
     serializer = DoorTypeSerializer(data=request.data)
     if serializer.is_valid():
@@ -353,7 +394,7 @@ def add_door_type(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def edit_door_type(request, pk):
     try:
         door_type = DoorType.objects.get(pk=pk)
@@ -369,7 +410,7 @@ def edit_door_type(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def delete_door_type(request, pk):
     try:
         door_type = DoorType.objects.get(pk=pk)
@@ -380,7 +421,7 @@ def delete_door_type(request, pk):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def add_door_brand(request):
     serializer = DoorBrandSerializer(data=request.data)
     if serializer.is_valid():
@@ -390,7 +431,7 @@ def add_door_brand(request):
 
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def edit_door_brand(request, pk):
     try:
         door_brand = DoorBrand.objects.get(pk=pk)
@@ -406,7 +447,7 @@ def edit_door_brand(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def delete_door_brand(request, pk):
     try:
         door_brand = DoorBrand.objects.get(pk=pk)
@@ -417,7 +458,7 @@ def delete_door_brand(request, pk):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def add_lift_type(request):
     serializer = LiftTypeSerializer(data=request.data)
     if serializer.is_valid():
@@ -426,7 +467,7 @@ def add_lift_type(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def edit_lift_type(request, pk):
     try:
         lift_type = LiftType.objects.get(pk=pk)
@@ -442,7 +483,7 @@ def edit_lift_type(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def delete_lift_type(request, pk):
     try:
         lift_type = LiftType.objects.get(pk=pk)
@@ -453,7 +494,7 @@ def delete_lift_type(request, pk):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def add_controller_brand(request):
     serializer = ControllerBrandSerializer(data=request.data)
     if serializer.is_valid():
@@ -463,7 +504,7 @@ def add_controller_brand(request):
 
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def edit_controller_brand(request, pk):
     try:
         controller_brand = ControllerBrand.objects.get(pk=pk)
@@ -479,7 +520,7 @@ def edit_controller_brand(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def delete_controller_brand(request, pk):
     try:
         controller_brand = ControllerBrand.objects.get(pk=pk)
@@ -491,7 +532,7 @@ def delete_controller_brand(request, pk):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def add_cabin(request):
     serializer = CabinSerializer(data=request.data)
     if serializer.is_valid():
@@ -500,7 +541,7 @@ def add_cabin(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def edit_cabin(request, pk):
     try:
         cabin = Cabin.objects.get(pk=pk)
@@ -516,7 +557,7 @@ def edit_cabin(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def delete_cabin(request, pk):
     try:
         cabin = Cabin.objects.get(pk=pk)
@@ -763,7 +804,7 @@ def import_lifts_csv(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def add_type(request):
     serializer = TypeSerializer(data=request.data)
     if serializer.is_valid():
@@ -772,7 +813,7 @@ def add_type(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def edit_type(request, pk):
     try:
         type_obj = Type.objects.get(pk=pk)
@@ -788,7 +829,7 @@ def edit_type(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def delete_type(request, pk):
     try:
         type_obj = Type.objects.get(pk=pk)
@@ -799,7 +840,7 @@ def delete_type(request, pk):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def add_make(request):
     serializer = MakeSerializer(data=request.data)
     if serializer.is_valid():
@@ -808,7 +849,7 @@ def add_make(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def edit_make(request, pk):
     try:
         make = Make.objects.get(pk=pk)
@@ -824,7 +865,7 @@ def edit_make(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def delete_make(request, pk):
     try:
         make = Make.objects.get(pk=pk)
@@ -836,7 +877,7 @@ def delete_make(request, pk):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def add_unit(request):
     serializer = UnitSerializer(data=request.data)
     if serializer.is_valid():
@@ -845,7 +886,7 @@ def add_unit(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def edit_unit(request, pk):
     try:
         unit = Unit.objects.get(pk=pk)
@@ -861,7 +902,7 @@ def edit_unit(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def delete_unit(request, pk):
     try:
         unit = Unit.objects.get(pk=pk)
@@ -1051,25 +1092,81 @@ def import_items_csv(request):
 
 ####################################complaints########################################
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsOwner])
 def add_employee(request):
     serializer = EmployeeSerializer(data=request.data)
     if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        plain_password = request.data.get('password')
+        employee = serializer.save()
+        
+        try:
+            user = User.objects.create_user(
+                username=employee.username,
+                email=employee.email,
+                password=plain_password
+            )
+            employee_group, created = Group.objects.get_or_create(name='employee')
+            user.groups.add(employee_group)
+        except Exception as e:
+            employee.delete()
+            return Response({"error": f"Failed to create user account: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        subject = 'Welcome to ATOM LIFT - Employee Account Created'
+        message = (
+            f"Dear {employee.name},\n\n"
+            "Your employee account has been successfully created with ATOM LIFT.\n\n"
+            "You can now log in using your email and password.\n"
+            "If you have any questions, feel free to contact us.\n\n"
+            "Best regards,\n"
+            "The ATOM LIFT Team"
+        )
+        from_email = f"{settings.EMAIL_SENDER_NAME} <{settings.EMAIL_HOST_USER}>"
+        recipient_list = [employee.email]
+
+        try:
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=from_email,
+                recipient_list=recipient_list,
+                fail_silently=False,
+            )
+        except Exception as e:
+            print(f"Failed to send email: {str(e)}")
+
+        return Response({
+            "message": "Employee added successfully!",
+            "employee_id": employee.id
+        }, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsOwner])
 def edit_employee(request, pk):
     try:
         employee = Employee.objects.get(pk=pk)
     except Employee.DoesNotExist:
         return Response({"error": "Employee not found"}, status=status.HTTP_404_NOT_FOUND)
+    
     serializer = EmployeeSerializer(employee, data=request.data, partial=True)
     if serializer.is_valid():
-        serializer.save()
+        plain_password = request.data.get('password')
+        employee = serializer.save()
+        
+        try:
+            user = User.objects.get(email=employee.email)
+            if 'username' in request.data:
+                user.username = employee.username
+            if 'email' in request.data:
+                user.email = employee.email
+            if plain_password:
+                user.set_password(plain_password)
+            user.save()
+        except User.DoesNotExist:
+            return Response({"error": "Associated user not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": f"Failed to update user account: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+        
         return Response({
             "message": "Employee updated successfully!",
             "employee_id": employee.id
@@ -1077,15 +1174,19 @@ def edit_employee(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsOwner])
 def delete_employee(request, pk):
     try:
         employee = Employee.objects.get(pk=pk)
+        try:
+            user = User.objects.get(email=employee.email)
+            user.delete()
+        except User.DoesNotExist:
+            pass
         employee.delete()
         return Response({"message": "Employee deleted successfully!"}, status=status.HTTP_200_OK)
     except Employee.DoesNotExist:
         return Response({"error": "Employee not found"}, status=status.HTTP_404_NOT_FOUND)
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -1093,7 +1194,6 @@ def get_employees(request):
     employees = Employee.objects.all()
     serializer = EmployeeSerializer(employees, many=True)
     return Response(serializer.data)
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_complaint(request):

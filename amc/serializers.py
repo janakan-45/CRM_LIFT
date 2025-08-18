@@ -30,7 +30,7 @@ class AMCSerializer(serializers.ModelSerializer):
         model = AMC
         fields = [
             'id', 'customer', 'customer_id', 'customer_name', 
-            'reference_id', 'amc_name', 'invoice_frequency', 
+            'reference_id', 'amcname', 'invoice_frequency', 
             'amc_type', 'amc_type_name', 'payment_terms', 
             'payment_terms_name', 'start_date', 'end_date', 
             'equipment_no', 'notes', 'is_generate_contract',

@@ -9,9 +9,25 @@ from io import BytesIO
 import csv
 from .models import Requisition
 from .serializers import RequisitionSerializer
+from rest_framework.permissions import BasePermission
 
 
 ############################ Requisition ######################################
+
+class IsOwner(BasePermission):
+    def has_permission(self, request, view):
+        return request.user and request.user.groups.filter(name='owner').exists()
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsOwner])
+def check_owner_status(request):
+    user = request.user
+    return Response({
+        'message': f'User {user.username} is an owner',
+        'is_owner': True
+    }, status=status.HTTP_200_OK)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])

@@ -1,4 +1,6 @@
 from django.db import models
+from django.contrib.auth.hashers import make_password
+
 
 
 #############################lift########################################
@@ -138,7 +140,19 @@ class Item(models.Model):
 from sales.models import Customer
 
 class Employee(models.Model):
-    name = models.CharField(max_length=100, unique=True)
+    username = models.CharField(max_length=150, unique=True,blank=True,null=True)
+    email = models.EmailField(unique=True,blank=True,null=True)
+    password = models.CharField(max_length=128,null=True,blank=True)  # Stores hashed password
+    name = models.CharField(max_length=100, unique=True, blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        # Hash the password if it has been changed or is new
+        if self.password and not self.password.startswith('pbkdf2_sha256$'):
+            self.password = make_password(self.password)
+        # Ensure name is derived from username if not provided
+        if not self.name:
+            self.name = self.username
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name

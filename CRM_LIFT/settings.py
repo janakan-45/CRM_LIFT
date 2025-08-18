@@ -82,10 +82,10 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'defaultdb',
         'USER': 'avnadmin',
-        'PASSWORD': 'AVNS_GsMALnJXUoRffmwaBmV',
-        'HOST': 'mysql-22fb3b94-sakthiveljanakan-decf.b.aivencloud.com',
+        'PASSWORD': 'AVNS_h0wn-zq0tNKsBpCPJwX',
+        'HOST': 'mysql-2f632805-sakthiveljanakan-decf.c.aivencloud.com',
         'PORT': '11613',
-    }
+}
 }
 
 # REST Framework and Simple JWT settings
@@ -204,8 +204,8 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = "sakthiveljanakan@gmail.com"
-EMAIL_HOST_PASSWORD = "egqmooixwvnswwrv "  
+EMAIL_HOST_USER = "lengendlightning@gmail.com"
+EMAIL_HOST_PASSWORD ="lcxstejjbegkvcxo"   
 
 EMAIL_SENDER_NAME = "ATOM LIFT"
 

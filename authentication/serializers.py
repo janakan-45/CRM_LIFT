@@ -5,6 +5,7 @@ from .models import Lift, FloorID, Brand, MachineType, MachineBrand, DoorType, D
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.hashers import make_password
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
@@ -38,7 +39,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 class UserLoginSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
-    password = serializers.CharField(write_only=True, required=True)
+    password = serializers.CharField( required=True)
 
 class ForgotPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
@@ -245,9 +246,41 @@ class ItemSerializer(serializers.ModelSerializer):
 ##################################complaints########################################
 
 class EmployeeSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=False, validators=[validate_password])
+    password_confirm = serializers.CharField(write_only=True, required=False)
+
     class Meta:
         model = Employee
-        fields = ['id', 'name']
+        fields = ['id', 'username', 'email', 'password', 'password_confirm', 'name']
+        extra_kwargs = {
+            'username': {'required': True},
+            'email': {'required': True},
+            'name': {'required': False}  # Name is derived from username if not provided
+        }
+
+    def validate(self, data):
+        if 'password' in data and 'password_confirm' in data:
+            if data['password'] != data['password_confirm']:
+                raise serializers.ValidationError({"password": "Passwords must match."})
+        if 'username' in data and Employee.objects.filter(username__iexact=data['username']).exists():
+            if not (self.instance and self.instance.username == data['username']):
+                raise serializers.ValidationError({"username": "An employee with this username already exists."})
+        if 'email' in data and Employee.objects.filter(email__iexact=data['email']).exists():
+            if not (self.instance and self.instance.email == data['email']):
+                raise serializers.ValidationError({"email": "An employee with this email already exists."})
+        return data
+
+    def create(self, validated_data):
+        validated_data.pop('password_confirm', None)
+        if 'password' in validated_data:
+            validated_data['password'] = make_password(validated_data['password'])
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        validated_data.pop('password_confirm', None)
+        if 'password' in validated_data:
+            validated_data['password'] = make_password(validated_data['password'])
+        return super().update(instance, validated_data)
 
 class ComplaintSerializer(serializers.ModelSerializer):
     assign_to = serializers.PrimaryKeyRelatedField(queryset=Employee.objects.all(), write_only=True, required=False)

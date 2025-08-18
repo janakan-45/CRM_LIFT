@@ -8,12 +8,28 @@ from django.http import HttpResponse
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
 from io import BytesIO
+from rest_framework.permissions import BasePermission
 
 
 ###########################################Customer  views######################################### 
+
+class IsOwner(BasePermission):
+    def has_permission(self, request, view):
+        return request.user and request.user.groups.filter(name='owner').exists()
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsOwner])
+def check_owner_status(request):
+    user = request.user
+    return Response({
+        'message': f'User {user.username} is an owner',
+        'is_owner': True
+    }, status=status.HTTP_200_OK)
+
 # Dynamic dropdown views
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def add_route(request):
     serializer = RouteSerializer(data=request.data)
     if serializer.is_valid():
@@ -22,7 +38,7 @@ def add_route(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def edit_route(request, pk):
     try:
         route = Route.objects.get(pk=pk)
@@ -38,7 +54,7 @@ def edit_route(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def delete_route(request, pk):
     try:
         route = Route.objects.get(pk=pk)
@@ -48,7 +64,7 @@ def delete_route(request, pk):
         return Response({"error": "Route not found"}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def add_branch(request):
     serializer = BranchSerializer(data=request.data)
     if serializer.is_valid():
@@ -57,7 +73,7 @@ def add_branch(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def edit_branch(request, pk):
     try:
         branch = Branch.objects.get(pk=pk)
@@ -73,7 +89,7 @@ def edit_branch(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def delete_branch(request, pk):
     try:
         branch = Branch.objects.get(pk=pk)
@@ -84,7 +100,7 @@ def delete_branch(request, pk):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def add_province_state(request):
     serializer = ProvinceStateSerializer(data=request.data)
     if serializer.is_valid():
@@ -93,7 +109,7 @@ def add_province_state(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def edit_province_state(request, pk):
     try:
         province_state = ProvinceState.objects.get(pk=pk)
@@ -109,7 +125,7 @@ def edit_province_state(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def delete_province_state(request, pk):
     try:
         province_state = ProvinceState.objects.get(pk=pk)

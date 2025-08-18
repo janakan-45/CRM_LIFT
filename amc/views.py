@@ -11,10 +11,26 @@ from openpyxl.utils import get_column_letter
 from django.http import HttpResponse
 from io import BytesIO
 from django.utils import timezone
+from rest_framework.permissions import BasePermission
 
 ###################################amc views######################################
+
+class IsOwner(BasePermission):
+    def has_permission(self, request, view):
+        return request.user and request.user.groups.filter(name='owner').exists()
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsOwner])
+def check_owner_status(request):
+    user = request.user
+    return Response({
+        'message': f'User {user.username} is an owner',
+        'is_owner': True
+    }, status=status.HTTP_200_OK)
+
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def add_amc_type(request):
     serializer = AMCTypeSerializer(data=request.data)
     if serializer.is_valid():
@@ -23,7 +39,7 @@ def add_amc_type(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def edit_amc_type(request, pk):
     try:
         amc_type = AMCType.objects.get(pk=pk)
@@ -39,7 +55,7 @@ def edit_amc_type(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def delete_amc_type(request, pk):
     try:
         amc_type = AMCType.objects.get(pk=pk)
@@ -50,7 +66,7 @@ def delete_amc_type(request, pk):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def add_payment_terms(request):
     serializer = PaymentTermsSerializer(data=request.data)
     if serializer.is_valid():
@@ -60,7 +76,7 @@ def add_payment_terms(request):
 
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def edit_payment_terms(request, pk):
     try:
         payment_terms = PaymentTerms.objects.get(pk=pk)
@@ -76,7 +92,7 @@ def edit_payment_terms(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsOwner])
 def delete_payment_terms(request, pk):
     try:
         payment_terms = PaymentTerms.objects.get(pk=pk)

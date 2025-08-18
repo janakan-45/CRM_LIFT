@@ -20,7 +20,7 @@ class PaymentTerms(models.Model):
 class AMC(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     reference_id = models.CharField(max_length=10, unique=True, editable=False)
-    amc_name = models.CharField(max_length=100, blank=True)  # New field for AMC name
+    amcname = models.CharField(max_length=100, blank=True)  # New field for AMC name
     invoice_frequency = models.CharField(
         max_length=20,
         choices=[
