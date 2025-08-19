@@ -53,4 +53,14 @@ urlpatterns = [
     path('delete-recurring-invoice/<int:pk>/', views.delete_recurring_invoice, name='delete_recurring_invoice'),
     path('recurring-invoice-list/', views.recurring_invoice_list, name='recurring_invoice_list'),
     path('export-recurring-invoices-to-excel/', views.export_recurring_invoices_to_excel, name='export_recurring_invoices_to_excel'),
+
+
+
+############################################payment received urls##########################################
+
+    path('add-payment-received/', views.add_payment_received, name='add_payment_received'),
+    path('edit-payment-received/<int:pk>/', views.edit_payment_received, name='edit_payment_received'),
+    path('delete-payment-received/<int:pk>/', views.delete_payment_received, name='delete_payment_received'),
+    path('payment-received-list/', views.payment_received_list, name='payment_received_list'),
+    path('export-payments-received-to-excel/', views.export_payment_received_to_excel, name='export_payments_received_to_excel'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

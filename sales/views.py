@@ -2,8 +2,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from .models import Customer, Route, Branch, ProvinceState, Quotation,Invoice,RecurringInvoice,RecurringInvoiceItem
-from .serializers import CustomerSerializer, RouteSerializer, BranchSerializer, ProvinceStateSerializer, QuotationSerializer,InvoiceSerializer,RecurringInvoiceItemSerializer,RecurringInvoiceSerializer
+from .models import Customer, Route, Branch, ProvinceState, Quotation,Invoice,RecurringInvoice,RecurringInvoiceItem,PaymentReceived
+from .serializers import CustomerSerializer, RouteSerializer, BranchSerializer, ProvinceStateSerializer, QuotationSerializer,InvoiceSerializer,RecurringInvoiceItemSerializer,RecurringInvoiceSerializer,PaymentReceivedSerializer
 from django.http import HttpResponse
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
@@ -679,6 +679,92 @@ def export_recurring_invoices_to_excel(request):
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
     response['Content-Disposition'] = 'attachment; filename=recurring_invoices_export.xlsx'
+    response.write(output.read())
+
+    return response
+
+
+###########################################Payment Received views#########################################
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_payment_received(request):
+    serializer = PaymentReceivedSerializer(data=request.data)
+    if serializer.is_valid():
+        payment = serializer.save()
+        return Response({
+            "message": "Payment Received added successfully!",
+            "payment_number": payment.payment_number
+        }, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def edit_payment_received(request, pk):
+    try:
+        payment = PaymentReceived.objects.get(pk=pk)
+    except PaymentReceived.DoesNotExist:
+        return Response({"error": "Payment Received not found"}, status=status.HTTP_404_NOT_FOUND)
+    serializer = PaymentReceivedSerializer(payment, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({
+            "message": "Payment Received updated successfully!",
+            "payment_number": payment.payment_number
+        }, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_payment_received(request, pk):
+    try:
+        payment = PaymentReceived.objects.get(pk=pk)
+        payment.delete()
+        return Response({"message": "Payment Received deleted successfully!"}, status=status.HTTP_200_OK)
+    except PaymentReceived.DoesNotExist:
+        return Response({"error": "Payment Received not found"}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def payment_received_list(request):
+    payments = PaymentReceived.objects.all()
+    serializer = PaymentReceivedSerializer(payments, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def export_payment_received_to_excel(request):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Payments Received"
+
+    headers = [
+        'Payment Number', 'Customer', 'Invoice', 'Amount', 'Date',
+        'Payment Type', 'Tax Deducted'
+    ]
+
+    for col_num, header in enumerate(headers, 1):
+        ws[f"{get_column_letter(col_num)}1"] = header
+
+    payments = PaymentReceived.objects.all()
+
+    for row_num, payment in enumerate(payments, 2):
+        ws[f"{get_column_letter(1)}{row_num}"] = payment.payment_number
+        ws[f"{get_column_letter(2)}{row_num}"] = payment.customer.site_name if payment.customer else ''
+        ws[f"{get_column_letter(3)}{row_num}"] = payment.invoice.reference_id if payment.invoice else ''
+        ws[f"{get_column_letter(4)}{row_num}"] = str(payment.amount)
+        ws[f"{get_column_letter(5)}{row_num}"] = payment.date.strftime('%Y-%m-%d') if payment.date else ''
+        ws[f"{get_column_letter(6)}{row_num}"] = payment.payment_type
+        ws[f"{get_column_letter(7)}{row_num}"] = payment.tax_deducted
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename=payments_received_export.xlsx'
     response.write(output.read())
 
     return response

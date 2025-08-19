@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Customer, Route, Branch, ProvinceState, Quotation,Invoice,RecurringInvoiceItem,RecurringInvoice
+from .models import Customer, Route, Branch, ProvinceState, Quotation,Invoice,RecurringInvoiceItem,RecurringInvoice,PaymentReceived
 
 
 #########################################customer Serializer#########################################   
@@ -167,3 +167,24 @@ class RecurringInvoiceSerializer(serializers.ModelSerializer):
         for item_data in items_data:
             RecurringInvoiceItem.objects.create(recurring_invoice=instance, **item_data)
         return instance
+    
+
+############################################payment received serializer##########################################
+class PaymentReceivedSerializer(serializers.ModelSerializer):
+    customer = serializers.PrimaryKeyRelatedField(queryset=Customer.objects.all(), required=True)
+    invoice = serializers.PrimaryKeyRelatedField(queryset=Invoice.objects.all(), required=False)
+    customer_name = serializers.SerializerMethodField()
+    invoice_reference = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PaymentReceived
+        fields = [
+            'id', 'payment_number', 'customer', 'customer_name', 'invoice', 'invoice_reference',
+            'amount', 'date', 'payment_type', 'tax_deducted', 'uploads_files'
+        ]
+
+    def get_customer_name(self, obj):
+        return obj.customer.site_name if obj.customer else None
+
+    def get_invoice_reference(self, obj):
+        return obj.invoice.reference_id if obj.invoice else None

@@ -238,4 +238,48 @@ class RecurringInvoiceItem(models.Model):
 
     def __str__(self):
         return f"Item for {self.recurring_invoice.reference_id}"
+    
+
+
+#########################################paynment received###########################################
+
+class PaymentReceived(models.Model):
+    REFERENCE_PREFIX = 'PAY'
+    payment_number = models.CharField(max_length=10, unique=True, editable=False)
+    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True)
+    invoice = models.ForeignKey(Invoice, on_delete=models.SET_NULL, null=True, blank=True)  # Linked to particular invoice for deposit consideration
+    amount = models.DecimalField(max_digits=12, decimal_places=2)  # Temporarily used as 'value' since no dedicated amount field exists in Invoice
+    date = models.DateField()
+    payment_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('cash', 'Cash'),
+            ('bank_transfer', 'Bank Transfer')
+        ],
+        default='cash'
+    )
+    tax_deducted = models.CharField(
+        max_length=20,
+        choices=[
+            ('no', 'No Tax deducted'),
+            ('yes_tds', 'Yes, TDS (Income Tax)')
+        ],
+        default='no'
+    )
+    uploads_files = models.FileField(upload_to='payment_received_uploads/', null=True, blank=True, max_length=100)
+
+    def save(self, *args, **kwargs):
+        if not self.payment_number:
+            last_payment = PaymentReceived.objects.all().order_by('id').last()
+            if last_payment:
+                last_id = int(last_payment.payment_number.replace('PAY', ''))
+                self.payment_number = f'{self.REFERENCE_PREFIX}{str(last_id + 1).zfill(3)}'
+            else:
+                self.payment_number = 'PAY001'
+        # No automatic TDS calculation implemented yet, as Invoice lacks an amount field and TDS rate is unspecified.
+        # If tax_deducted == 'yes_tds', the amount is treated as received value; future enhancements can add TDS computation based on invoice details.
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.payment_number
 
