@@ -198,6 +198,15 @@ class RecurringInvoice(models.Model):
     billing_address = models.TextField(blank=True)
     gst_treatment = models.CharField(max_length=50, blank=True)  # Add specific choices if known, e.g., ('regular', 'Regular'), etc.
     uploads_files = models.FileField(upload_to='recurring_invoice_uploads/', null=True, blank=True, max_length=100)
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('active', 'Active'),
+            ('completed', 'Completed'),
+            ('cancelled', 'Cancelled'),
+        ],
+        default='active'
+    )
 
     def save(self, *args, **kwargs):
         if not self.reference_id:
@@ -207,7 +216,6 @@ class RecurringInvoice(models.Model):
                 self.reference_id = f'{self.REFERENCE_PREFIX}{str(last_id + 1).zfill(3)}'
             else:
                 self.reference_id = 'RINV001'
-        # Auto-populate billing_address from customer's site_address if not provided
         if self.customer and not self.billing_address:
             self.billing_address = self.customer.site_address
         super().save(*args, **kwargs)
