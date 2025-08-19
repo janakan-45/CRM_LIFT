@@ -61,37 +61,54 @@ class ResetPasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError({"password": "Passwords must match."})
         return data
 
+
+from django.core.files.images import get_image_dimensions
+
+from rest_framework import serializers
+from django.conf import settings
+from .models import Profile
+from django.contrib.auth.models import User
+
+
 class ProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username')
     email = serializers.EmailField(source='user.email')
-    photo = serializers.SerializerMethodField()
+    photo = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
         model = Profile
         fields = ['username', 'email', 'phone', 'photo']
 
-    def get_photo(self, obj):
-        if not obj.photo:
-            return None
-        media_url = settings.MEDIA_URL
-        if not media_url.endswith('/'):
-            media_url += '/'
-        return media_url + str(obj.photo)
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.photo:
+            request = self.context.get('request')
+            if request:
+                # absolute URL for frontend
+                data['photo'] = request.build_absolute_uri(instance.photo.url)
+            else:
+                data['photo'] = settings.MEDIA_URL + str(instance.photo)
+        else:
+            data['photo'] = None
+        return data
 
     def update(self, instance, validated_data):
         user_data = validated_data.pop('user', {})
         user = instance.user
+
         if 'username' in user_data:
             if User.objects.filter(username__iexact=user_data['username']).exclude(id=user.id).exists():
                 raise serializers.ValidationError({"username": "This username is already taken."})
             user.username = user_data['username']
+
         if 'email' in user_data:
             if User.objects.filter(email__iexact=user_data['email']).exclude(id=user.id).exists():
                 raise serializers.ValidationError({"email": "This email is already in use."})
             user.email = user_data['email']
+
         user.save()
         return super().update(instance, validated_data)
-    
+
 
 # In serializers.py
 

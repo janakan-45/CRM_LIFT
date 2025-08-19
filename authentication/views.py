@@ -5,7 +5,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from .models import Lift, FloorID, Brand, MachineType, MachineBrand, DoorType, DoorBrand, LiftType, ControllerBrand, Cabin, Type, Make, Unit, Item,Complaint, Employee,Profile
-from .serializers import LiftSerializer, FloorIDSerializer, BrandSerializer, MachineTypeSerializer, MachineBrandSerializer, DoorTypeSerializer, DoorBrandSerializer, LiftTypeSerializer, ControllerBrandSerializer, CabinSerializer, TypeSerializer, MakeSerializer, UnitSerializer, ItemSerializer, UserRegistrationSerializer, UserLoginSerializer,ComplaintSerializer, EmployeeSerializer,ResetPasswordSerializer,ForgotPasswordSerializer,ProfileSerializer
+from .serializers import LiftSerializer, FloorIDSerializer, BrandSerializer, MachineTypeSerializer, MachineBrandSerializer, DoorTypeSerializer, DoorBrandSerializer, LiftTypeSerializer, ControllerBrandSerializer, CabinSerializer, TypeSerializer, MakeSerializer, UnitSerializer, ItemSerializer, UserRegistrationSerializer, UserLoginSerializer,ComplaintSerializer, EmployeeSerializer,ResetPasswordSerializer,ForgotPasswordSerializer,ProfileSerializer,ChangePasswordSerializer
 from django.http import HttpResponse
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
@@ -233,29 +233,39 @@ def reset_password(request):
 
 
 
+from rest_framework.decorators import api_view, permission_classes, parser_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.parsers import MultiPartParser, FormParser
+from .models import Profile
+from .serializers import ProfileSerializer
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def profile(request):
     try:
         profile = request.user.profile
-        print(f"Profile found: {profile}")
     except Profile.DoesNotExist:
         profile = Profile.objects.create(user=request.user)
-        print(f"Created new profile for user: {request.user}")
-    
-    serializer = ProfileSerializer(profile)
+
+    serializer = ProfileSerializer(profile, context={'request': request})
     return Response(serializer.data)
+
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
+@parser_classes([MultiPartParser, FormParser])
 def update_profile(request):
     try:
         profile = request.user.profile
     except Profile.DoesNotExist:
         profile = Profile.objects.create(user=request.user)
 
-    parser_classes = (MultiPartParser, FormParser)
-    serializer = ProfileSerializer(profile, data=request.data, partial=True)
+    serializer = ProfileSerializer(
+        profile, data=request.data, partial=True, context={'request': request}
+    )
     if serializer.is_valid():
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -263,15 +273,8 @@ def update_profile(request):
 
 
 
-# In views.py
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.response import Response
-from rest_framework import status
-from .serializers import ChangePasswordSerializer
-from django.core.mail import send_mail
-from django.conf import settings
-from datetime import datetime
+
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])

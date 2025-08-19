@@ -5,6 +5,7 @@ from django.conf.urls.static import static
 from rest_framework_simplejwt.views import TokenRefreshView
 
 
+
 urlpatterns = [
 
     path('register/',views. register, name='register'),
