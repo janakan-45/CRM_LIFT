@@ -1,11 +1,12 @@
 from rest_framework import serializers
-from .models import Lift, FloorID, Brand, MachineType, MachineBrand, DoorType, DoorBrand, LiftType, ControllerBrand, Cabin,Complaint, Employee,Customer
+from .models import Lift, FloorID, Brand, MachineType, MachineBrand, DoorType, DoorBrand, LiftType, ControllerBrand, Cabin,Complaint, Employee,Customer,Profile
 
 
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.hashers import make_password
+from django.conf import settings
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
@@ -39,7 +40,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 class UserLoginSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
-    password = serializers.CharField( required=True)
+    password = serializers.CharField(required=True)
 
 class ForgotPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
@@ -60,6 +61,36 @@ class ResetPasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError({"password": "Passwords must match."})
         return data
 
+class ProfileSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username')
+    email = serializers.EmailField(source='user.email')
+    photo = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Profile
+        fields = ['username', 'email', 'phone', 'photo']
+
+    def get_photo(self, obj):
+        if not obj.photo:
+            return None
+        media_url = settings.MEDIA_URL
+        if not media_url.endswith('/'):
+            media_url += '/'
+        return media_url + str(obj.photo)
+
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop('user', {})
+        user = instance.user
+        if 'username' in user_data:
+            if User.objects.filter(username__iexact=user_data['username']).exclude(id=user.id).exists():
+                raise serializers.ValidationError({"username": "This username is already taken."})
+            user.username = user_data['username']
+        if 'email' in user_data:
+            if User.objects.filter(email__iexact=user_data['email']).exclude(id=user.id).exists():
+                raise serializers.ValidationError({"email": "This email is already in use."})
+            user.email = user_data['email']
+        user.save()
+        return super().update(instance, validated_data)
 
 
 # ###########################lift#######################################
