@@ -164,3 +164,70 @@ class Invoice(models.Model):
 
     def __str__(self):
         return self.reference_id
+    
+
+
+###########################################recurring invoice##########################################
+
+
+from authentication.models import Item  
+
+class RecurringInvoice(models.Model):
+    REFERENCE_PREFIX = 'RINV'
+    reference_id = models.CharField(max_length=10, unique=True, editable=False)
+    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True)
+    profile_name = models.CharField(max_length=100)
+    order_number = models.CharField(max_length=50, blank=True)
+    repeat_every = models.CharField(
+        max_length=20,
+        choices=[
+            ('week', 'Week'),
+            ('2week', '2 Weeks'),
+            ('month', 'Month'),
+            ('2month', '2 Months'),
+            ('3month', '3 Months'),
+            ('6month', '6 Months'),
+            ('year', 'Year'),
+            ('2year', '2 Years'),
+        ],
+        default='week'
+    )
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+    sales_person = models.ForeignKey('authentication.Employee', on_delete=models.SET_NULL, null=True, blank=True)
+    billing_address = models.TextField(blank=True)
+    gst_treatment = models.CharField(max_length=50, blank=True)  # Add specific choices if known, e.g., ('regular', 'Regular'), etc.
+    uploads_files = models.FileField(upload_to='recurring_invoice_uploads/', null=True, blank=True, max_length=100)
+
+    def save(self, *args, **kwargs):
+        if not self.reference_id:
+            last_invoice = RecurringInvoice.objects.all().order_by('id').last()
+            if last_invoice:
+                last_id = int(last_invoice.reference_id.replace('RINV', ''))
+                self.reference_id = f'{self.REFERENCE_PREFIX}{str(last_id + 1).zfill(3)}'
+            else:
+                self.reference_id = 'RINV001'
+        # Auto-populate billing_address from customer's site_address if not provided
+        if self.customer and not self.billing_address:
+            self.billing_address = self.customer.site_address
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.reference_id
+
+class RecurringInvoiceItem(models.Model):
+    recurring_invoice = models.ForeignKey(RecurringInvoice, on_delete=models.CASCADE, related_name='items')
+    item = models.ForeignKey(Item, on_delete=models.SET_NULL, null=True, blank=True)
+    rate = models.DecimalField(max_digits=10, decimal_places=2)
+    qty = models.IntegerField(default=1)
+    tax = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)  # Assuming tax is a percentage
+    total = models.DecimalField(max_digits=12, decimal_places=2, editable=False)
+
+    def save(self, *args, **kwargs):
+        # Auto-calculate total: rate * qty * (1 + tax/100)
+        self.total = self.rate * self.qty * (1 + (self.tax / 100))
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Item for {self.recurring_invoice.reference_id}"
+

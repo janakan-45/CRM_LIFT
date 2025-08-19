@@ -42,4 +42,15 @@ urlpatterns = [
     path('delete-invoice/<int:pk>/', views.delete_invoice, name='delete_invoice'),
     path('invoice-list/', views.invoice_list, name='invoice_list'),
     path('export-invoices-to-excel/', views.export_invoices_to_excel, name='export_invoices_to_excel'),
+
+
+###########################################recurring invoice urls##########################################
+
+    # Add the following to urls.py inside the urlpatterns list, after the invoice URLs
+
+    path('add-recurring-invoice/', views.add_recurring_invoice, name='add_recurring_invoice'),
+    path('edit-recurring-invoice/<int:pk>/', views.edit_recurring_invoice, name='edit_recurring_invoice'),
+    path('delete-recurring-invoice/<int:pk>/', views.delete_recurring_invoice, name='delete_recurring_invoice'),
+    path('recurring-invoice-list/', views.recurring_invoice_list, name='recurring_invoice_list'),
+    path('export-recurring-invoices-to-excel/', views.export_recurring_invoices_to_excel, name='export_recurring_invoices_to_excel'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

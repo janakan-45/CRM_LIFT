@@ -2,8 +2,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from .models import Customer, Route, Branch, ProvinceState, Quotation,Invoice
-from .serializers import CustomerSerializer, RouteSerializer, BranchSerializer, ProvinceStateSerializer, QuotationSerializer,InvoiceSerializer
+from .models import Customer, Route, Branch, ProvinceState, Quotation,Invoice,RecurringInvoice,RecurringInvoiceItem
+from .serializers import CustomerSerializer, RouteSerializer, BranchSerializer, ProvinceStateSerializer, QuotationSerializer,InvoiceSerializer,RecurringInvoiceItemSerializer,RecurringInvoiceSerializer
 from django.http import HttpResponse
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
@@ -494,6 +494,97 @@ def export_invoices_to_excel(request):
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
     response['Content-Disposition'] = 'attachment; filename=invoices_export.xlsx'
+    response.write(output.read())
+
+    return response
+
+
+###########################################recurring invoice views#########################################
+
+# Add the following to views.py at the end, after the invoice views
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_recurring_invoice(request):
+    serializer = RecurringInvoiceSerializer(data=request.data)
+    if serializer.is_valid():
+        recurring_invoice = serializer.save()
+        return Response({
+            "message": "Recurring Invoice added successfully!",
+            "reference_id": recurring_invoice.reference_id
+        }, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def edit_recurring_invoice(request, pk):
+    try:
+        recurring_invoice = RecurringInvoice.objects.get(pk=pk)
+    except RecurringInvoice.DoesNotExist:
+        return Response({"error": "Recurring Invoice not found"}, status=status.HTTP_404_NOT_FOUND)
+    serializer = RecurringInvoiceSerializer(recurring_invoice, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({
+            "message": "Recurring Invoice updated successfully!",
+            "reference_id": recurring_invoice.reference_id
+        }, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_recurring_invoice(request, pk):
+    try:
+        recurring_invoice = RecurringInvoice.objects.get(pk=pk)
+        recurring_invoice.delete()
+        return Response({"message": "Recurring Invoice deleted successfully!"}, status=status.HTTP_200_OK)
+    except RecurringInvoice.DoesNotExist:
+        return Response({"error": "Recurring Invoice not found"}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def recurring_invoice_list(request):
+    recurring_invoices = RecurringInvoice.objects.all()
+    serializer = RecurringInvoiceSerializer(recurring_invoices, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def export_recurring_invoices_to_excel(request):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Recurring Invoices"
+
+    headers = [
+        'Reference ID', 'Customer', 'Profile Name', 'Order Number', 'Repeat Every',
+        'Start Date', 'End Date', 'Sales Person', 'Billing Address', 'GST Treatment'
+    ]
+
+    for col_num, header in enumerate(headers, 1):
+        ws[f"{get_column_letter(col_num)}1"] = header
+
+    recurring_invoices = RecurringInvoice.objects.all()
+
+    for row_num, invoice in enumerate(recurring_invoices, 2):
+        ws[f"{get_column_letter(1)}{row_num}"] = invoice.reference_id
+        ws[f"{get_column_letter(2)}{row_num}"] = invoice.customer.site_name if invoice.customer else ''
+        ws[f"{get_column_letter(3)}{row_num}"] = invoice.profile_name
+        ws[f"{get_column_letter(4)}{row_num}"] = invoice.order_number
+        ws[f"{get_column_letter(5)}{row_num}"] = invoice.repeat_every
+        ws[f"{get_column_letter(6)}{row_num}"] = invoice.start_date.strftime('%Y-%m-%d') if invoice.start_date else ''
+        ws[f"{get_column_letter(7)}{row_num}"] = invoice.end_date.strftime('%Y-%m-%d') if invoice.end_date else ''
+        ws[f"{get_column_letter(8)}{row_num}"] = invoice.sales_person.name if invoice.sales_person else ''
+        ws[f"{get_column_letter(9)}{row_num}"] = invoice.billing_address
+        ws[f"{get_column_letter(10)}{row_num}"] = invoice.gst_treatment
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename=recurring_invoices_export.xlsx'
     response.write(output.read())
 
     return response

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Customer, Route, Branch, ProvinceState, Quotation,Invoice
+from .models import Customer, Route, Branch, ProvinceState, Quotation,Invoice,RecurringInvoiceItem,RecurringInvoice
 
 
 #########################################customer Serializer#########################################   
@@ -112,3 +112,61 @@ class InvoiceSerializer(serializers.ModelSerializer):
 
     def get_amc_type_name(self, obj):
         return obj.amc_type.name if obj.amc_type else None
+    
+
+
+
+###########################################recurring invoice serialziers##########################################
+
+# Add the following to serializers.py at the end, after the InvoiceSerializer
+
+from authentication.models import Item
+
+class RecurringInvoiceItemSerializer(serializers.ModelSerializer):
+    item_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = RecurringInvoiceItem
+        fields = ['id', 'item', 'item_name', 'rate', 'qty', 'tax', 'total']
+
+    def get_item_name(self, obj):
+        return obj.item.name if obj.item else None  # Assuming Item has a 'name' field; adjust if different
+
+class RecurringInvoiceSerializer(serializers.ModelSerializer):
+    customer = serializers.PrimaryKeyRelatedField(queryset=Customer.objects.all(), required=True)
+    sales_person = serializers.PrimaryKeyRelatedField(queryset=Employee.objects.all(), required=False)
+    items = RecurringInvoiceItemSerializer(many=True, required=False)
+    customer_name = serializers.SerializerMethodField()
+    sales_person_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = RecurringInvoice
+        fields = [
+            'id', 'reference_id', 'customer', 'customer_name', 'profile_name', 'order_number',
+            'repeat_every', 'start_date', 'end_date', 'sales_person', 'sales_person_name',
+            'billing_address', 'gst_treatment', 'uploads_files', 'items'
+        ]
+
+    def get_customer_name(self, obj):
+        return obj.customer.site_name if obj.customer else None
+
+    def get_sales_person_name(self, obj):
+        return obj.sales_person.name if obj.sales_person else None
+
+    def create(self, validated_data):
+        items_data = validated_data.pop('items', [])
+        recurring_invoice = RecurringInvoice.objects.create(**validated_data)
+        for item_data in items_data:
+            RecurringInvoiceItem.objects.create(recurring_invoice=recurring_invoice, **item_data)
+        return recurring_invoice
+
+    def update(self, instance, validated_data):
+        items_data = validated_data.pop('items', [])
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        # Delete existing items and recreate
+        instance.items.all().delete()
+        for item_data in items_data:
+            RecurringInvoiceItem.objects.create(recurring_invoice=instance, **item_data)
+        return instance
