@@ -262,6 +262,56 @@ def update_profile(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+
+# In views.py
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.response import Response
+from rest_framework import status
+from .serializers import ChangePasswordSerializer
+from django.core.mail import send_mail
+from django.conf import settings
+from datetime import datetime
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
+    if serializer.is_valid():
+        user = request.user
+        user.set_password(serializer.validated_data['new_password'])
+        user.save()
+
+        # Send confirmation email
+        subject = 'ATOM LIFT - Password Changed Successfully'
+        message = (
+            f"Dear {user.username},\n\n"
+            "Your password for your ATOM LIFT account has been successfully changed.\n"
+            f"Change Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S %Z')}\n"
+            "If this was not you, please secure your account immediately or contact support.\n\n"
+            "Best regards,\n"
+            "The ATOM LIFT Team"
+        )
+        from_email = f"{settings.EMAIL_SENDER_NAME} <{settings.EMAIL_HOST_USER}>"
+        recipient_list = [user.email]
+
+        try:
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=from_email,
+                recipient_list=recipient_list,
+                fail_silently=False,
+            )
+        except Exception as e:
+            print(f"Failed to send password change email: {str(e)}")
+
+        return Response({
+            'message': 'Password changed successfully. A confirmation email has been sent.'
+        }, status=status.HTTP_200_OK)
+    
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 ############################ Lift ######################################
 
 @api_view(['POST'])

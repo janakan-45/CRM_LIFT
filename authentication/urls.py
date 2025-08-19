@@ -13,7 +13,8 @@ urlpatterns = [
     path('update-profile/', views.update_profile, name='update_profile'),
     path('forgot-password/', views.forgot_password, name='forgot_password'),
     path('reset-password/', views.reset_password, name='reset_password'),
-     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('change-password/', views.change_password, name='change_password'),
+    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     ############################lift#######################################
     path('add-floor-id/', views.add_floor_id, name='add_floor_id'),
     path('edit-floor-id/<int:pk>/', views.edit_floor_id, name='edit_floor_id'),
