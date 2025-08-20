@@ -14,6 +14,8 @@ class Requisition(models.Model):
     amc_id = models.ForeignKey(AMC, on_delete=models.SET_NULL, null=True, blank=True)
     service = models.CharField(max_length=100, blank=True)
     employee = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=[('OPEN', 'Open'), ('CLOSED', 'Closed')], default='OPEN')
+    approve_for = models.CharField(max_length=20, choices=[('PENDING', 'Pending'), ('APPROVED', 'Approved'), ('REJECTED', 'Rejected')], default='PENDING')
 
     def save(self, *args, **kwargs):
         if not self.reference_id:
