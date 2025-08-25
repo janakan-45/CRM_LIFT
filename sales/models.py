@@ -1,4 +1,5 @@
 from django.db import models
+from datetime import timedelta, date
 ##########################################3Customer Model#########################################
 # Dynamic dropdown models
 class Route(models.Model):
@@ -119,14 +120,14 @@ class Quotation(models.Model):
         return self.reference_id
     
 
+from authentication.models import Item
 
 
-########################invoice model########################
-
+######################################## Invoice & InvoiceItem ##################################
 class Invoice(models.Model):
     REFERENCE_PREFIX = 'INV'
     reference_id = models.CharField(max_length=10, unique=True, editable=False)
-    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True)
+    customer = models.ForeignKey('Customer', on_delete=models.SET_NULL, null=True, blank=True)
     amc_type = models.ForeignKey(AMCType, on_delete=models.SET_NULL, null=True, blank=True)
     start_date = models.DateField()
     due_date = models.DateField()
@@ -151,7 +152,6 @@ class Invoice(models.Model):
         default='open'
     )
 
-
     def save(self, *args, **kwargs):
         if not self.reference_id:
             last_invoice = Invoice.objects.all().order_by('id').last()
@@ -164,18 +164,29 @@ class Invoice(models.Model):
 
     def __str__(self):
         return self.reference_id
-    
 
 
-###########################################recurring invoice##########################################
+class InvoiceItem(models.Model):
+    invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='items')
+    item = models.ForeignKey(Item, on_delete=models.SET_NULL, null=True, blank=True)
+    rate = models.DecimalField(max_digits=10, decimal_places=2)
+    qty = models.IntegerField(default=1)
+    tax = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)
+    total = models.DecimalField(max_digits=12, decimal_places=2, editable=False)
+
+    def save(self, *args, **kwargs):
+        self.total = self.rate * self.qty * (1 + (self.tax / 100))
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Item for {self.invoice.reference_id}"
 
 
-from authentication.models import Item  
-
+######################################## Recurring Invoice ######################################
 class RecurringInvoice(models.Model):
     REFERENCE_PREFIX = 'RINV'
     reference_id = models.CharField(max_length=10, unique=True, editable=False)
-    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True)
+    customer = models.ForeignKey('Customer', on_delete=models.SET_NULL, null=True, blank=True)
     profile_name = models.CharField(max_length=100)
     order_number = models.CharField(max_length=50, blank=True)
     repeat_every = models.CharField(
@@ -190,13 +201,14 @@ class RecurringInvoice(models.Model):
             ('year', 'Year'),
             ('2year', '2 Years'),
         ],
-        default='week'
+        default='month'
     )
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)
+    last_generated_date = models.DateField(null=True, blank=True)
     sales_person = models.ForeignKey('authentication.Employee', on_delete=models.SET_NULL, null=True, blank=True)
     billing_address = models.TextField(blank=True)
-    gst_treatment = models.CharField(max_length=50, blank=True)  # Add specific choices if known, e.g., ('regular', 'Regular'), etc.
+    gst_treatment = models.CharField(max_length=50, blank=True)
     uploads_files = models.FileField(upload_to='recurring_invoice_uploads/', null=True, blank=True, max_length=100)
     status = models.CharField(
         max_length=20,
@@ -223,22 +235,45 @@ class RecurringInvoice(models.Model):
     def __str__(self):
         return self.reference_id
 
+    # Utility methods for scheduling
+    def get_next_date(self):
+        if not self.last_generated_date:
+            return self.start_date
+        mapping = {
+            'week': 7,
+            '2week': 14,
+            'month': 30,
+            '2month': 60,
+            '3month': 90,
+            '6month': 180,
+            'year': 365,
+            '2year': 730,
+        }
+        return self.last_generated_date + timedelta(days=mapping[self.repeat_every])
+
+    def should_generate(self, today=None):
+        today = today or date.today()
+        next_date = self.get_next_date()
+        if self.end_date and next_date > self.end_date:
+            return False
+        return today >= next_date
+
+
 class RecurringInvoiceItem(models.Model):
     recurring_invoice = models.ForeignKey(RecurringInvoice, on_delete=models.CASCADE, related_name='items')
     item = models.ForeignKey(Item, on_delete=models.SET_NULL, null=True, blank=True)
     rate = models.DecimalField(max_digits=10, decimal_places=2)
     qty = models.IntegerField(default=1)
-    tax = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)  # Assuming tax is a percentage
+    tax = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)
     total = models.DecimalField(max_digits=12, decimal_places=2, editable=False)
 
     def save(self, *args, **kwargs):
-        # Auto-calculate total: rate * qty * (1 + tax/100)
         self.total = self.rate * self.qty * (1 + (self.tax / 100))
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Item for {self.recurring_invoice.reference_id}"
-    
+
 
 
 #########################################paynment received###########################################

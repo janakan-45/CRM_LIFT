@@ -53,6 +53,9 @@ urlpatterns = [
     path('delete-recurring-invoice/<int:pk>/', views.delete_recurring_invoice, name='delete_recurring_invoice'),
     path('recurring-invoice-list/', views.recurring_invoice_list, name='recurring_invoice_list'),
     path('export-recurring-invoices-to-excel/', views.export_recurring_invoices_to_excel, name='export_recurring_invoices_to_excel'),
+    path('generate_invoice_from_recurring/<str:pk>/', views.generate_invoice_from_recurring, name='generate_invoices_from_recurring'),
+
+
 
 
 

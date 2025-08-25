@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Customer, Route, Branch, ProvinceState, Quotation,Invoice,RecurringInvoiceItem,RecurringInvoice,PaymentReceived
+from .models import Customer, Route, Branch, ProvinceState, Quotation,Invoice,RecurringInvoiceItem,RecurringInvoice,PaymentReceived,InvoiceItem
 
 
 #########################################customer Serializer#########################################   
@@ -92,28 +92,30 @@ class QuotationSerializer(serializers.ModelSerializer):
 
 
 
-class InvoiceSerializer(serializers.ModelSerializer):
-    customer = serializers.PrimaryKeyRelatedField(queryset=Customer.objects.all(), write_only=True, required=False)
-    amc_type = serializers.PrimaryKeyRelatedField(queryset=AMCType.objects.all(), write_only=True, required=False)
+class InvoiceItemSerializer(serializers.ModelSerializer):
+    item_name = serializers.SerializerMethodField()
 
+    class Meta:
+        model = InvoiceItem
+        fields = ['id', 'item', 'item_name', 'rate', 'qty', 'tax', 'total']
+
+    def get_item_name(self, obj):
+        return obj.item.name if obj.item else None
+
+
+class InvoiceSerializer(serializers.ModelSerializer):
+    items = InvoiceItemSerializer(many=True, read_only=True)
     customer_name = serializers.SerializerMethodField()
-    amc_type_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Invoice
         fields = [
-            'id', 'reference_id', 'customer_name', 'amc_type_name', 'start_date',
-            'due_date', 'discount', 'payment_term', 'uploads_files', 'customer',
-            'amc_type', 'status'
+            'id', 'reference_id', 'customer', 'customer_name', 'start_date', 'due_date',
+            'discount', 'payment_term', 'uploads_files', 'status', 'items'
         ]
 
     def get_customer_name(self, obj):
         return obj.customer.site_name if obj.customer else None
-
-    def get_amc_type_name(self, obj):
-        return obj.amc_type.name if obj.amc_type else None
-    
-
 
 
 ###########################################recurring invoice serialziers##########################################
@@ -129,27 +131,44 @@ class RecurringInvoiceItemSerializer(serializers.ModelSerializer):
     def get_item_name(self, obj):
         return obj.item.name if obj.item else None
 
+
 class RecurringInvoiceSerializer(serializers.ModelSerializer):
-    customer = serializers.PrimaryKeyRelatedField(queryset=Customer.objects.all(), required=True)
-    sales_person = serializers.PrimaryKeyRelatedField(queryset=Employee.objects.all(), required=False)
     items = RecurringInvoiceItemSerializer(many=True, required=False)
     customer_name = serializers.SerializerMethodField()
-    sales_person_name = serializers.SerializerMethodField()
-    billing_address = serializers.CharField(required=False)
+    frequency_display = serializers.SerializerMethodField()
+    last_invoice_date = serializers.SerializerMethodField()
+    next_invoice_date = serializers.SerializerMethodField()
+    amount = serializers.SerializerMethodField()
 
     class Meta:
         model = RecurringInvoice
         fields = [
             'id', 'reference_id', 'customer', 'customer_name', 'profile_name', 'order_number',
-            'repeat_every', 'start_date', 'end_date', 'sales_person', 'sales_person_name',
-            'billing_address', 'gst_treatment', 'uploads_files', 'items', 'status'
+            'repeat_every', 'frequency_display',
+            'start_date', 'end_date', 'last_generated_date',
+            'last_invoice_date', 'next_invoice_date',
+            'sales_person', 'billing_address', 'gst_treatment', 'uploads_files',
+            'status', 'items', 'amount'
         ]
 
     def get_customer_name(self, obj):
         return obj.customer.site_name if obj.customer else None
 
-    def get_sales_person_name(self, obj):
-        return obj.sales_person.name if obj.sales_person else None
+    def get_frequency_display(self, obj):
+        return dict(obj._meta.get_field('repeat_every').choices).get(obj.repeat_every, obj.repeat_every)
+
+    def get_last_invoice_date(self, obj):
+        return obj.last_generated_date
+
+    def get_next_invoice_date(self, obj):
+        return obj.get_next_date() if obj else None
+
+    def get_amount(self, obj):
+        total = 0
+        for item in obj.items.all():
+            total += item.total
+        return total
+
 
     def create(self, validated_data):
         items_data = validated_data.pop('items', [])
@@ -167,8 +186,6 @@ class RecurringInvoiceSerializer(serializers.ModelSerializer):
         for item_data in items_data:
             RecurringInvoiceItem.objects.create(recurring_invoice=instance, **item_data)
         return instance
-    
-
 ############################################payment received serializer##########################################
 class PaymentReceivedSerializer(serializers.ModelSerializer):
     customer = serializers.PrimaryKeyRelatedField(queryset=Customer.objects.all(), required=True)

@@ -2,7 +2,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from .models import Customer, Route, Branch, ProvinceState, Quotation,Invoice,RecurringInvoice,RecurringInvoiceItem,PaymentReceived
+from .models import Customer, Route, Branch, ProvinceState, Quotation,Invoice,RecurringInvoice,RecurringInvoiceItem,PaymentReceived,InvoiceItem
 from .serializers import CustomerSerializer, RouteSerializer, BranchSerializer, ProvinceStateSerializer, QuotationSerializer,InvoiceSerializer,RecurringInvoiceItemSerializer,RecurringInvoiceSerializer,PaymentReceivedSerializer
 from django.http import HttpResponse
 from openpyxl import Workbook
@@ -682,6 +682,52 @@ def export_recurring_invoices_to_excel(request):
     response.write(output.read())
 
     return response
+
+
+
+
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def generate_invoice_from_recurring(request, pk):
+    from datetime import timedelta, date
+    try:
+        ri = RecurringInvoice.objects.get(pk=pk, status='active')
+    except RecurringInvoice.DoesNotExist:
+        return Response({"error": "Recurring invoice not found or inactive"}, status=status.HTTP_404_NOT_FOUND)
+
+    today = date.today()
+    if not ri.should_generate(today):
+        return Response({"error": "Invoice not due yet"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Create Invoice
+    invoice = Invoice.objects.create(
+        customer=ri.customer,
+        start_date=ri.get_next_date(),
+        due_date=ri.get_next_date() + timedelta(days=30),
+        discount=0,
+        payment_term='cash'
+    )
+
+    # Copy items
+    for item in ri.items.all():
+        InvoiceItem.objects.create(
+            invoice=invoice,
+            item=item.item,
+            rate=item.rate,
+            qty=item.qty,
+            tax=item.tax
+        )
+
+    ri.last_generated_date = ri.get_next_date()
+    ri.save()
+
+    return Response({
+        "message": f"Invoice {invoice.reference_id} generated successfully",
+        "invoice_id": invoice.id,
+        "reference_id": invoice.reference_id
+    }, status=status.HTTP_201_CREATED)
 
 
 ###########################################Payment Received views#########################################
