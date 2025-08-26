@@ -79,13 +79,12 @@ WSGI_APPLICATION = 'CRM_LIFT.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 DATABASES = {
     'default': {
-         'ENGINE': 'django.db.backends.mysql',
+          'ENGINE': 'django.db.backends.mysql',
         'NAME': 'defaultdb',
         'USER': 'avnadmin',
         'PASSWORD':'AVNS_h0wn-zq0tNKsBpCPJwX',
         'HOST': 'mysql-2f632805-sakthiveljanakan-decf.c.aivencloud.com',
         'PORT': '11613',
-
 }
 }
 
