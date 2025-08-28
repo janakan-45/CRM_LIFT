@@ -297,11 +297,10 @@ class ItemSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"tax": "IGST and GST should not be set for Non-Taxable Services."})
         return data
 
+
     def create(self, validated_data):
         if validated_data['service_type'] == 'Goods':
             validated_data.pop('sac_code', None)
-            validated_data.pop('igst', None)
-            validated_data.pop('gst', None)
         elif validated_data['service_type'] == 'Services' and validated_data['tax_preference'] == 'Non-Taxable':
             validated_data.pop('sac_code', None)
             validated_data.pop('igst', None)

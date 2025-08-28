@@ -385,7 +385,7 @@ def export_quotations_to_excel(request):
 
     for row_num, quotation in enumerate(quotations, 2):
         ws[f"{get_column_letter(1)}{row_num}"] = quotation.reference_id
-        ws[f"{get_column_letter(2)}{row_num}"] = quotation.customer.name if quotation.customer else ''
+        ws[f"{get_column_letter(2)}{row_num}"] = quotation.customer.site_name if quotation.customer else ''
         ws[f"{get_column_letter(3)}{row_num}"] = quotation.amc_type.name if quotation.amc_type else ''
         ws[f"{get_column_letter(4)}{row_num}"] = quotation.sales_service_executive.name if quotation.sales_service_executive else ''
         ws[f"{get_column_letter(5)}{row_num}"] = quotation.type
