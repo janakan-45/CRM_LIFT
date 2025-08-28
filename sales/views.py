@@ -499,6 +499,190 @@ def export_invoices_to_excel(request):
     return response
 
 
+# views.py (add this at the end or appropriate place)
+
+import logging
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from io import BytesIO
+from django.http import HttpResponse
+
+logger = logging.getLogger(__name__)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def print_invoice(request, pk):
+    try:
+        invoice = Invoice.objects.get(pk=pk)
+    except Invoice.DoesNotExist:
+        return Response({"error": "Invoice not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    try:
+        # Prepare data
+        context = {
+            'company_name': 'Atom Lifts India Pvt Ltd',
+            'address': 'No.87B, Pillayar Koll Street, Mannurpet, Ambattur Indus Estate, Chennai 50, CHENNAI',
+            'phone': '9600087456',
+            'email': 'admin@atomlifts.com',
+            'invoice_no': invoice.reference_id,
+            'invoice_date': invoice.start_date.strftime('%d/%m/%Y') if invoice.start_date else 'N/A',
+            'due_date': invoice.due_date.strftime('%d/%m/%Y') if invoice.due_date else 'N/A',
+            'customer_name': invoice.customer.site_name if invoice.customer else 'N/A',
+            'customer_address': invoice.customer.site_address if invoice.customer else 'N/A',
+            'customer_email': invoice.customer.email if invoice.customer else 'N/A',
+            'customer_phone': invoice.customer.phone if invoice.customer else 'N/A',
+            'discount': str(invoice.discount),
+            'payment_term': invoice.payment_term.upper(),
+            'status': invoice.status.upper(),
+            'items': [],
+            'subtotal': 0,
+            'tax_total': 0,
+            'grand_total': 0,
+        }
+
+        # Process items
+        for item in invoice.items.all():
+            item_total = item.rate * item.qty
+            item_tax_amount = item_total * (item.tax / 100)
+            item_grand = item_total + item_tax_amount
+            context['items'].append({
+                'item_name': item.item.name if item.item else 'N/A',
+                'rate': str(item.rate),
+                'qty': str(item.qty),
+                'tax': str(item.tax),
+                'total': str(item_total),
+                'tax_amount': str(item_tax_amount),
+                'grand': str(item_grand),
+            })
+            context['subtotal'] += item_total
+            context['tax_total'] += item_tax_amount
+            context['grand_total'] += item_grand
+
+        # Apply discount to grand total
+        discount_amount = context['grand_total'] * (float(invoice.discount) / 100)
+        context['grand_total'] -= discount_amount
+        context['discount_amount'] = str(discount_amount)
+
+        # Create PDF buffer
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=72)
+        styles = getSampleStyleSheet()
+        story = []
+
+        # Header
+        header_style = ParagraphStyle(
+            name='HeaderStyle',
+            parent=styles['Heading1'],
+            fontSize=18,
+            alignment=1  # Center
+        )
+        story.append(Paragraph(context['company_name'], header_style))
+        story.append(Paragraph(context['address'], styles['Normal']))
+        story.append(Paragraph(f"Phone: {context['phone']} | Email: {context['email']}", styles['Normal']))
+        story.append(Spacer(1, 12))
+
+        # Invoice Details Table
+        story.append(Paragraph("Invoice Details", styles['Heading2']))
+        data = [
+            ['Invoice No:', context['invoice_no']],
+            ['Invoice Date:', context['invoice_date']],
+            ['Due Date:', context['due_date']],
+            ['Payment Term:', context['payment_term']],
+            ['Status:', context['status']],
+        ]
+        table = Table(data, colWidths=[150, 350])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        story.append(table)
+        story.append(Spacer(1, 12))
+
+        # Customer Details
+        story.append(Paragraph("Customer Details", styles['Heading2']))
+        data = [
+            ['Customer Name:', context['customer_name']],
+            ['Address:', context['customer_address']],
+            ['Email:', context['customer_email']],
+            ['Phone:', context['customer_phone']],
+        ]
+        table = Table(data, colWidths=[150, 350])
+        table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        story.append(table)
+        story.append(Spacer(1, 12))
+
+        # Items Table
+        story.append(Paragraph("Items", styles['Heading2']))
+        if context['items']:
+            data = [['Item Name', 'Rate', 'Qty', 'Tax (%)', 'Subtotal', 'Tax Amount', 'Total']]
+            for item in context['items']:
+                data.append([
+                    item['item_name'],
+                    item['rate'],
+                    item['qty'],
+                    item['tax'],
+                    item['total'],
+                    item['tax_amount'],
+                    item['grand']
+                ])
+            table = Table(data, colWidths=[150, 60, 40, 60, 60, 60, 60])
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ]))
+            story.append(table)
+        else:
+            story.append(Paragraph("No items found.", styles['Normal']))
+        story.append(Spacer(1, 12))
+
+        # Totals
+        story.append(Paragraph("Totals", styles['Heading2']))
+        data = [
+            ['Subtotal:', str(context['subtotal'])],
+            ['Tax Total:', str(context['tax_total'])],
+            ['Discount (%):', context['discount']],
+            ['Discount Amount:', context['discount_amount']],
+            ['Grand Total:', str(context['grand_total'])],
+        ]
+        table = Table(data, colWidths=[150, 350])
+        table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        story.append(table)
+
+        # Build PDF
+        doc.build(story)
+
+        # Return PDF response
+        buffer.seek(0)
+        response = HttpResponse(buffer, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename=invoice_{context["invoice_no"]}.pdf'
+        return response
+
+    except Exception as e:
+        logger.error(f"Unexpected error in print_invoice: {str(e)}")
+        return Response({"error": f"Unexpected error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 ###########################################recurring invoice views#########################################
 
 # Add the following to views.py at the end, after the invoice views

@@ -42,6 +42,8 @@ urlpatterns = [
     path('delete-invoice/<int:pk>/', views.delete_invoice, name='delete_invoice'),
     path('invoice-list/', views.invoice_list, name='invoice_list'),
     path('export-invoices-to-excel/', views.export_invoices_to_excel, name='export_invoices_to_excel'),
+    # urls.py (add this to urlpatterns, after invoice URLs)
+    path('print-invoice/<int:pk>/', views.print_invoice, name='print_invoice'),
 
 
 ###########################################recurring invoice urls##########################################
