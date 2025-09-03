@@ -1384,6 +1384,21 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from .models import Complaint
+from io import BytesIO
+from django.http import HttpResponse
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+import logging
+
+logger = logging.getLogger(__name__)
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def print_complaint(request, pk):
@@ -1404,7 +1419,7 @@ def print_complaint(request, pk):
             'ticket_type': complaint.type,
             'priority': complaint.priority,
             'customer_name': complaint.customer.site_name if complaint.customer else '',
-            'site_address': f"{complaint.contact_person_name}, {complaint.contact_person_mobile}",
+            'site_address': complaint.customer.site_address if complaint.customer and hasattr(complaint.customer, 'site_address') else '',
             'contact_person': complaint.contact_person_name,
             'contact_mobile': complaint.contact_person_mobile,
             'block_wing': complaint.block_wing,
