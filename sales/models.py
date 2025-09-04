@@ -61,6 +61,7 @@ class Customer(models.Model):
     overdue_services = models.IntegerField(default=0)
     # Tickets field
     tickets = models.IntegerField(default=0)
+    lifts = models.ManyToManyField('authentication.Lift', blank=True)
 
     uploads_files = models.FileField(upload_to='customer_uploads/', null=True, blank=True, max_length=100)
 
@@ -79,7 +80,6 @@ class Customer(models.Model):
     def customer_id(self):
         """Backward compatible property to return the id"""
         return self.id
-    
 
 
 ######################################## Quotation model#########################################

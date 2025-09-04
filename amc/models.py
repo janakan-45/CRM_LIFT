@@ -55,40 +55,47 @@ class AMC(models.Model):
     
 
     def save(self, *args, **kwargs):
-     if not self.reference_id:
-        last_amc = AMC.objects.all().order_by('id').last()
-        if last_amc:
-            last_id = int(last_amc.reference_id.replace('AMC', ''))
-            self.reference_id = f'AMC{str(last_id + 1).zfill(2)}'
-        else:
-            self.reference_id = 'AMC01'
+        if not self.reference_id:
+            last_amc = AMC.objects.all().order_by('id').last()
+            if last_amc:
+                last_id = int(last_amc.reference_id.replace('AMC', ''))
+                self.reference_id = f'AMC{str(last_id + 1).zfill(2)}'
+            else:
+                self.reference_id = 'AMC01'
     
-     if self.is_generate_contract:
-        from decimal import Decimal
-        self.total = Decimal(str(self.price)) * Decimal(str(self.no_of_lifts)) * (Decimal('1') + Decimal(str(self.gst_percentage)) / Decimal('100'))
+        if self.is_generate_contract:
+            from decimal import Decimal
+            self.total = Decimal(str(self.price)) * Decimal(str(self.no_of_lifts)) * (Decimal('1') + Decimal(str(self.gst_percentage)) / Decimal('100'))
     
-     self.contract_amount = self.total
+        self.contract_amount = self.total
     
-    # Ensure total_amount_paid is properly initialized (default is 0.00)
-     if not hasattr(self, 'total_amount_paid') or self.total_amount_paid is None:
-        self.total_amount_paid = Decimal('0.00')
+        # Ensure total_amount_paid is properly initialized (default is 0.00)
+        if not hasattr(self, 'total_amount_paid') or self.total_amount_paid is None:
+            self.total_amount_paid = Decimal('0.00')
     
-    # Calculate amount_due with proper decimal handling
-     self.amount_due = Decimal(str(self.contract_amount)) - Decimal(str(self.total_amount_paid))
+        # Calculate amount_due with proper decimal handling
+        self.amount_due = Decimal(str(self.contract_amount)) - Decimal(str(self.total_amount_paid))
 
-    # Determine status based on dates and payments
-     today = timezone.now().date()
-     if self.start_date > today:
-        self.status = 'Pending'
-     elif self.start_date <= today <= self.end_date:
-        if self.amount_due <= Decimal('0'):
-            self.status = 'Paid'
-        else:
-            self.status = 'Active'
-     elif today > self.end_date:
-        if self.amount_due <= Decimal('0'):
-            self.status = 'Completed'
-        else:
-            self.status = 'Overdue'
+        # Determine status based on dates and payments
+        today = timezone.now().date()
+        if self.start_date > today:
+            self.status = 'Pending'
+        elif self.start_date <= today <= self.end_date:
+            if self.amount_due <= Decimal('0'):
+                self.status = 'Paid'
+            else:
+                self.status = 'Active'
+        elif today > self.end_date:
+            if self.amount_due <= Decimal('0'):
+                self.status = 'Completed'
+            else:
+                self.status = 'Overdue'
 
-     super().save(*args, **kwargs)
+        # Update Customer's no_of_lifts and contracts if is_generate_contract is True
+        if self.is_generate_contract:
+            customer = self.customer
+            customer.no_of_lifts = self.no_of_lifts
+            customer.contracts = AMC.objects.filter(customer=customer, is_generate_contract=True).count()
+            customer.save()
+
+        super().save(*args, **kwargs)

@@ -3,6 +3,11 @@ from .models import Customer, Route, Branch, ProvinceState, Quotation,Invoice,Re
 
 
 #########################################customer Serializer#########################################   
+from rest_framework import serializers
+from .models import Customer, Route, Branch, ProvinceState, Quotation, Invoice, RecurringInvoiceItem, RecurringInvoice, PaymentReceived, InvoiceItem
+from authentication.models import Lift  # Import Lift model from auth app
+
+#########################################customer Serializer#########################################   
 class RouteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Route
@@ -22,10 +27,11 @@ class CustomerSerializer(serializers.ModelSerializer):
     routes = serializers.PrimaryKeyRelatedField(queryset=Route.objects.all(), write_only=True, required=False)
     branch = serializers.PrimaryKeyRelatedField(queryset=Branch.objects.all(), write_only=True, required=False)
     province_state = serializers.PrimaryKeyRelatedField(queryset=ProvinceState.objects.all(), write_only=True, required=False)
-
+    lifts = serializers.PrimaryKeyRelatedField(queryset=Lift.objects.all(), many=True, write_only=True, required=False)  # Added for lift association
     routes_value = serializers.SerializerMethodField()
     branch_value = serializers.SerializerMethodField()
     province_state_value = serializers.SerializerMethodField()
+    lift_codes = serializers.SerializerMethodField()  # Ensure this is correctly tied to get_lift_codes
 
     class Meta:
         model = Customer
@@ -34,9 +40,9 @@ class CustomerSerializer(serializers.ModelSerializer):
             'office_address', 'contact_person_name', 'designation',
             'pin_code', 'country', 'province_state_value', 'city', 'sector', 'routes_value',
             'branch_value', 'handover_date', 'billing_name', 'pan_number', 'gst_number',
-            'routes', 'branch', 'province_state',
+            'routes', 'branch', 'province_state', 'lifts', 'lift_codes',
             'active_mobile', 'expired_mobile', 'contracts', 'no_of_lifts',
-            'completed_services', 'due_services', 'overdue_services', 'tickets','uploads_files'
+            'completed_services', 'due_services', 'overdue_services', 'tickets', 'uploads_files'
         ]
 
     def get_routes_value(self, obj):
@@ -48,6 +54,26 @@ class CustomerSerializer(serializers.ModelSerializer):
     def get_province_state_value(self, obj):
         return obj.province_state.value if obj.province_state else None
 
+    def get_lift_codes(self, obj):  # Ensure this method exists and is correctly implemented
+        return [lift.lift_code for lift in obj.lifts.all()] if obj.lifts.exists() else []
+
+    def create(self, validated_data):
+        lifts_data = validated_data.pop('lifts', [])
+        customer = Customer.objects.create(**validated_data)
+        if lifts_data:
+            customer.lifts.set(lifts_data)
+        return customer
+
+    def update(self, instance, validated_data):
+        lifts_data = validated_data.pop('lifts', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        if lifts_data is not None:
+            instance.lifts.set(lifts_data)
+        return instance
+
+# ... (rest of the serializers remain unchanged)
 
 #########################################Quotation Serializer#########################################
 

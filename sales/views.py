@@ -156,6 +156,14 @@ def get_province_states(request):
     return Response(serializer.data)
 
 # Customer CRUD views
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from .models import Customer
+from .serializers import CustomerSerializer
+from authentication.models import Lift  # Import Lift model
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_customer(request):
@@ -203,7 +211,6 @@ def customer_list(request):
     customers = Customer.objects.all()
     serializer = CustomerSerializer(customers, many=True)
     return Response(serializer.data)
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def export_customers_to_excel(request):

@@ -211,6 +211,33 @@ class LiftSerializer(serializers.ModelSerializer):
             'door_type', 'door_brand', 'controller_brand', 'cabin'
         ]
 
+    def validate(self, data):
+        """
+        Validate that load_kg matches no_of_passengers * 68.
+        Extract the numeric part from no_of_passengers (e.g., '5 Persons' -> 5).
+        """
+        no_of_passengers = data.get('no_of_passengers', '')
+        load_kg = data.get('load_kg', '')
+
+        # Extract number of passengers (assuming format like "5 Persons")
+        try:
+            passengers = int(no_of_passengers.split()[0])
+        except (ValueError, IndexError):
+            raise serializers.ValidationError({
+                'no_of_passengers': 'Invalid format. Expected format: "X Persons".'
+            })
+
+        # Calculate expected load
+        expected_load = str(passengers * 68)  # Convert to string to match CharField
+
+        # Validate load_kg
+        if load_kg != expected_load:
+            raise serializers.ValidationError({
+                'load_kg': f'Load must be {expected_load} kg for {no_of_passengers}.'
+            })
+
+        return data
+
     # Define methods to get the 'value' field for each related model
     def get_floor_id_value(self, obj):
         return obj.floor_id.value if obj.floor_id else None

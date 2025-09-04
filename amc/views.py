@@ -125,7 +125,8 @@ def add_amc(request):
         return Response({
             "message": "AMC added successfully!",
             "reference_id": amc.reference_id,
-            "customer_id": amc.customer.id
+            "customer_id": amc.customer.id,
+            "customer_name": amc.customer.site_name
         }, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
