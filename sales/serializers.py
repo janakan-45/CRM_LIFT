@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Customer, Route, Branch, ProvinceState, Quotation,Invoice,RecurringInvoiceItem,RecurringInvoice,PaymentReceived,InvoiceItem
+from .models import Customer, Route, Branch, ProvinceState, Quotation,Invoice,RecurringInvoiceItem,RecurringInvoice,PaymentReceived,InvoiceItem,CustomerLicense
 
 
 #########################################customer Serializer#########################################   
@@ -73,6 +73,27 @@ class CustomerSerializer(serializers.ModelSerializer):
             instance.lifts.set(lifts_data)
         return instance
 
+
+
+
+
+#########################################customer license Serializer#########################################
+class CustomerLicenseSerializer(serializers.ModelSerializer):
+    customer = serializers.PrimaryKeyRelatedField(queryset=Customer.objects.all(), write_only=True)
+    lift = serializers.PrimaryKeyRelatedField(queryset=Lift.objects.all(), write_only=True)
+    customer_name = serializers.SerializerMethodField()
+    lift_details = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CustomerLicense
+        fields = ['id', 'license_no', 'customer_name', 'lift_details', 'period_start', 'period_end', 'attachment', 'customer', 'lift']
+
+    def get_customer_name(self, obj):
+        return obj.customer.site_name if obj.customer else None
+
+    def get_lift_details(self, obj):
+        lift = obj.lift
+        return f"{lift.lift_code}, #{lift.id}, Name: {lift.name}, Floor: {lift.floor_id.value if lift.floor_id else 'N/A'}, Brand: {lift.brand.value if lift.brand else 'N/A'}, {lift.no_of_passengers}, {lift.load_kg} Kg, {lift.machine_type.value if lift.machine_type else 'N/A'} Machine, Machine Brand: {lift.machine_brand.value if lift.machine_brand else 'N/A'}, {lift.lift_type.value if lift.lift_type else 'N/A'} Lift, {lift.door_type.value if lift.door_type else 'N/A'} Door, Door Brand: {lift.door_brand.value if lift.door_brand else 'N/A'}, Controller Brand: {lift.controller_brand.value if lift.controller_brand else 'N/A'}, Cabin: {lift.cabin.value if lift.cabin else 'N/A'}"
 # ... (rest of the serializers remain unchanged)
 
 #########################################Quotation Serializer#########################################

@@ -317,4 +317,29 @@ class PaymentReceived(models.Model):
 
     def __str__(self):
         return self.payment_number
+    
+
+
+
+##############################customer lisencse###################################
+
+
+
+class CustomerLicense(models.Model):
+    REFERENCE_PREFIX = 'LC'
+    license_no = models.CharField(max_length=10, unique=True, editable=False)
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='licenses')
+    lift = models.ForeignKey(Lift, on_delete=models.CASCADE)
+    period_start = models.DateField()
+    period_end = models.DateField()
+    attachment = models.FileField(upload_to='license_attachments/', null=True, blank=True, max_length=100)
+
+    def save(self, *args, **kwargs):
+        if not self.license_no:
+            last_license = CustomerLicense.objects.all().order_by('id').last()
+            self.license_no = f'{self.REFERENCE_PREFIX}{str(1000 + (last_license.id + 1) if last_license else 1001)}'
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.license_no
 

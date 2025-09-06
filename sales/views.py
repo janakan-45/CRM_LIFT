@@ -2,8 +2,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from .models import Customer, Route, Branch, ProvinceState, Quotation,Invoice,RecurringInvoice,RecurringInvoiceItem,PaymentReceived,InvoiceItem
-from .serializers import CustomerSerializer, RouteSerializer, BranchSerializer, ProvinceStateSerializer, QuotationSerializer,InvoiceSerializer,RecurringInvoiceItemSerializer,RecurringInvoiceSerializer,PaymentReceivedSerializer
+from .models import Customer, Route, Branch, ProvinceState, Quotation,Invoice,RecurringInvoice,RecurringInvoiceItem,PaymentReceived,InvoiceItem,CustomerLicense
+from .serializers import CustomerSerializer, RouteSerializer, BranchSerializer, ProvinceStateSerializer, QuotationSerializer,InvoiceSerializer,RecurringInvoiceItemSerializer,RecurringInvoiceSerializer,PaymentReceivedSerializer,CustomerLicenseSerializer
 from django.http import HttpResponse
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
@@ -1005,3 +1005,24 @@ def export_payment_received_to_excel(request):
     response.write(output.read())
 
     return response
+
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_customer_license(request):
+    serializer = CustomerLicenseSerializer(data=request.data)
+    if serializer.is_valid():
+        license = serializer.save()
+        return Response({
+            "message": "Customer license added successfully!",
+            "license_no": license.license_no
+        }, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def customer_license_list(request):
+    licenses = CustomerLicense.objects.all()
+    serializer = CustomerLicenseSerializer(licenses, many=True)
+    return Response(serializer.data)

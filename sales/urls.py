@@ -68,4 +68,12 @@ urlpatterns = [
     path('delete-payment-received/<int:pk>/', views.delete_payment_received, name='delete_payment_received'),
     path('payment-received-list/', views.payment_received_list, name='payment_received_list'),
     path('export-payments-received-to-excel/', views.export_payment_received_to_excel, name='export_payments_received_to_excel'),
+
+
+
+##################################customer lisense#####################3#############
+      path('add-customer-license/', views.add_customer_license, name='add_customer_license'),
+    path('customer-license-list/', views.customer_license_list, name='customer_license_list'),
+    #path('edit-customer-license/<int:pk>/', views.edit_customer_license, name='edit_customer_license'),
+    #path('delete-customer-license/<int:pk>/', views.delete_customer_license, name='delete_customer_license'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
