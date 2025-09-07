@@ -122,35 +122,21 @@ class CustomerLicenseSerializer(serializers.ModelSerializer):
     customer = serializers.PrimaryKeyRelatedField(queryset=Customer.objects.all(), write_only=True)
     lift = serializers.PrimaryKeyRelatedField(queryset=Lift.objects.all(), write_only=True)
     customer_name = serializers.SerializerMethodField()
-    lift_details = LiftSerializer(source='lift', read_only=True)  # Full lift details here
+    lift_details = LiftSerializer(source='lift', read_only=True)
     license_no = serializers.CharField(read_only=True)
+    handover_date = serializers.DateField(source='customer.handover_date', read_only=True)  # ✅ Add this
 
     class Meta:
         model = CustomerLicense
         fields = [
             'id', 'license_no', 'customer_name', 'lift_details',
-            'period_start', 'period_end', 'attachment', 'customer', 'lift'
+            'period_start', 'period_end', 'handover_date',  # ✅ include handover_date
+            'attachment', 'customer', 'lift'
         ]
 
     def get_customer_name(self, obj):
         return obj.customer.site_name if obj.customer else None
 
-    def get_lift_details(self, obj):
-        if obj.lift:
-            lift = obj.lift
-            details = f"{lift.lift_code}"
-            if lift.name:
-                details += f", {lift.name}"
-            if lift.floor_id and lift.floor_id.value:
-                details += f", Floor: {lift.floor_id.value}"
-            if lift.brand and lift.brand.value:
-                details += f", Brand: {lift.brand.value}"
-            if lift.no_of_passengers:
-                details += f", {lift.no_of_passengers}"
-            if lift.load_kg:
-                details += f", {lift.load_kg} Kg"
-            return details
-        return "No lift details available"
 #########################################Quotation Serializer#########################################
 
 from amc.models import AMCType
