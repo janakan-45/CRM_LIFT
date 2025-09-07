@@ -165,36 +165,32 @@ from .serializers import CustomerSerializer
 from authentication.models import Lift  # Import Lift model
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsOwner])
 def add_customer(request):
     serializer = CustomerSerializer(data=request.data)
     if serializer.is_valid():
-        customer = serializer.save()
+        serializer.save()
         return Response({
             "message": "Customer added successfully!",
-            "reference_id": customer.reference_id,
-            "site_id": customer.site_id
+            "reference_id": serializer.data['reference_id']
         }, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsOwner])
 def edit_customer(request, pk):
     try:
         customer = Customer.objects.get(pk=pk)
     except Customer.DoesNotExist:
         return Response({"error": "Customer not found"}, status=status.HTTP_404_NOT_FOUND)
-
     serializer = CustomerSerializer(customer, data=request.data, partial=True)
     if serializer.is_valid():
-        customer = serializer.save()
+        serializer.save()
         return Response({
             "message": "Customer updated successfully!",
-            "reference_id": customer.reference_id,
-            "site_id": customer.site_id
+            "reference_id": serializer.data['reference_id']
         }, status=status.HTTP_200_OK)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_customer(request, pk):
@@ -1013,16 +1009,21 @@ def export_payment_received_to_excel(request):
 def add_customer_license(request):
     serializer = CustomerLicenseSerializer(data=request.data)
     if serializer.is_valid():
-        license = serializer.save()
-        return Response({
-            "message": "Customer license added successfully!",
-            "license_no": license.license_no
-        }, status=status.HTTP_201_CREATED)
+        try:
+            license = serializer.save()
+            return Response({
+                "message": "Customer license added successfully!",
+                "license_no": license.license_no,
+                "customer": license.customer.site_name,
+                "lift": license.lift.lift_code if license.lift else None
+            }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({"error": f"Failed to create license: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def customer_license_list(request):
-    licenses = CustomerLicense.objects.all()
+    licenses = CustomerLicense.objects.select_related('customer', 'lift').all()
     serializer = CustomerLicenseSerializer(licenses, many=True)
     return Response(serializer.data)
