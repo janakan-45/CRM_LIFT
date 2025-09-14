@@ -211,6 +211,19 @@ class LiftSerializer(serializers.ModelSerializer):
             'door_type', 'door_brand', 'controller_brand', 'cabin'
         ]
 
+    def validate_lift_code(self, value):
+        """
+        Validate that the lift_code is unique.
+        For updates, exclude the current instance from the uniqueness check.
+        """
+        instance = self.instance
+        if instance and instance.lift_code == value:
+            return value  # No change to lift_code, so no need to check uniqueness
+
+        if Lift.objects.filter(lift_code=value).exists():
+            raise serializers.ValidationError("A lift with this lift code already exists.")
+        return value
+
     def validate(self, data):
         """
         Validate that load_kg matches no_of_passengers * 68.

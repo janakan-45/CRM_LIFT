@@ -60,7 +60,7 @@ class Cabin(models.Model):
         return self.value
 
 class Lift(models.Model):
-    lift_code = models.CharField(max_length=10)
+    lift_code = models.CharField(max_length=10, unique=True)
     name = models.CharField(max_length=100)
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     floor_id = models.ForeignKey(FloorID, on_delete=models.SET_NULL, null=True)
