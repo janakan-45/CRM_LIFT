@@ -1347,7 +1347,7 @@ def export_complaints_to_excel(request):
         ws[f"{get_column_letter(1)}{row_num}"] = complaint.reference
         ws[f"{get_column_letter(2)}{row_num}"] = complaint.type
         ws[f"{get_column_letter(3)}{row_num}"] = complaint.date.strftime('%Y-%m-%d %H:%M:%S')
-        ws[f"{get_column_letter(4)}{row_num}"] = complaint.customer.name if complaint.customer else ''
+        ws[f"{get_column_letter(4)}{row_num}"] = complaint.customer.site_name if complaint.customer else ''
         ws[f"{get_column_letter(5)}{row_num}"] = complaint.contact_person_name
         ws[f"{get_column_letter(6)}{row_num}"] = complaint.contact_person_mobile
         ws[f"{get_column_letter(7)}{row_num}"] = complaint.block_wing
@@ -1420,8 +1420,8 @@ def print_complaint(request, pk):
             'priority': complaint.priority,
             'customer_name': complaint.customer.site_name if complaint.customer else '',
             'site_address': complaint.customer.site_address if complaint.customer and hasattr(complaint.customer, 'site_address') else '',
-            'contact_person': complaint.contact_person_name,
-            'contact_mobile': complaint.contact_person_mobile,
+            'contact_person': complaint.customer.contact_person_name,
+            'contact_mobile': complaint.customer.phone,
             'block_wing': complaint.block_wing,
             'subject': complaint.subject,
             'message': complaint.message,
