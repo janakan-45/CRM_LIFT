@@ -1422,7 +1422,7 @@ def print_complaint(request, pk):
             'site_address': complaint.customer.site_address if complaint.customer and hasattr(complaint.customer, 'site_address') else '',
             'contact_person': complaint.customer.contact_person_name,
             'contact_mobile': complaint.customer.phone,
-            #'block_wing': complaint.block_wing,
+            'block_wing': complaint.block_wing,
             'subject': complaint.subject,
             'message': complaint.message,
             'assigned_to': complaint.assign_to.name if complaint.assign_to else '',
@@ -1478,7 +1478,7 @@ def print_complaint(request, pk):
             ['Site Address:', context['site_address']],
             ['Contact Person:', context['contact_person']],
             ['Contact Mobile:', context['contact_mobile']],
-            #['Block/Wing:', context['block_wing']],
+            ['Block/Wing:', context['block_wing']],
         ]
         table = Table(data)
         table.setStyle(TableStyle([
