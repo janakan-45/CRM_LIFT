@@ -92,29 +92,56 @@ class CustomerSerializer(serializers.ModelSerializer):
         lift_code = validated_data.pop('lift_code', None)
         lifts_data = validated_data.pop('lifts', None)
 
+        # ✅ Update customer fields
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
 
+        # ✅ If lifts are updated, sync with CustomerLicense
         if lifts_data is not None:
             instance.lifts.set(lifts_data)
             instance.no_of_lifts = len(lifts_data)
             instance.save()
 
-        if generate_license and lift_code:
+            from .models import CustomerLicense  # ensure imported inside function
+
+            # Ensure every selected lift has a license
+            for lift in lifts_data:
+                CustomerLicense.objects.get_or_create(
+                    customer=instance,
+                    lift=lift,
+                    defaults={
+                        "period_start": date.today(),
+                        "period_end": date.today() + timedelta(days=365),
+                    },
+                )
+
+            # Optional: remove licenses for lifts no longer linked
+            CustomerLicense.objects.filter(customer=instance).exclude(lift__in=lifts_data).delete()
+
+        # ✅ If lift_code is provided, update or create the license
+        if lift_code:
             try:
+                from authentication.models import Lift  # safe import
+
                 lift = Lift.objects.get(lift_code=lift_code)
-                if not CustomerLicense.objects.filter(customer=instance, lift=lift).exists():
-                    CustomerLicense.objects.create(
-                        customer=instance,
-                        lift=lift,
-                        period_start=date.today(),
-                        period_end=date.today() + timedelta(days=365)
-                    )
+                license_obj, created = CustomerLicense.objects.get_or_create(
+                    customer=instance,
+                    lift=lift,
+                    defaults={
+                        "period_start": date.today(),
+                        "period_end": date.today() + timedelta(days=365),
+                    },
+                )
+                if not created:
+                    # Already exists → ensure it's saved
+                    license_obj.lift = lift
+                    license_obj.save()
+
             except Lift.DoesNotExist:
-                raise serializers.ValidationError({"lift_code": "No lift found with the provided lift code."})
-            except Exception as e:
-                raise serializers.ValidationError({"error": f"Failed to create license: {str(e)}"})
+                raise serializers.ValidationError(
+                    {"lift_code": "No lift found with the provided lift code."}
+                )
 
         return instance
 
