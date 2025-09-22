@@ -93,7 +93,16 @@ class Quotation(models.Model):
     reference_id = models.CharField(max_length=10, unique=True, editable=False)
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True)
     amc_type = models.ForeignKey(AMCType, on_delete=models.SET_NULL, null=True, blank=True)
-    sales_service_executive = models.ForeignKey('authentication.Employee', on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # 🔥 Salesman = employee
+    sales_service_executive = models.ForeignKey(
+        "authentication.CustomUser",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        limit_choices_to={"role": "SALESMAN"}  # only salesmen (employees) appear
+    )
+
     lifts = models.ManyToManyField(Lift)
     type = models.CharField(
         max_length=50,
@@ -119,6 +128,7 @@ class Quotation(models.Model):
 
     def __str__(self):
         return self.reference_id
+
     
 
 from authentication.models import Item
@@ -184,12 +194,14 @@ class InvoiceItem(models.Model):
 
 
 ######################################## Recurring Invoice ######################################
+
 class RecurringInvoice(models.Model):
     REFERENCE_PREFIX = 'RINV'
     reference_id = models.CharField(max_length=10, unique=True, editable=False)
     customer = models.ForeignKey('Customer', on_delete=models.SET_NULL, null=True, blank=True)
     profile_name = models.CharField(max_length=100)
     order_number = models.CharField(max_length=50, blank=True)
+
     repeat_every = models.CharField(
         max_length=20,
         choices=[
@@ -204,13 +216,24 @@ class RecurringInvoice(models.Model):
         ],
         default='month'
     )
+
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)
     last_generated_date = models.DateField(null=True, blank=True)
-    sales_person = models.ForeignKey('authentication.Employee', on_delete=models.SET_NULL, null=True, blank=True)
+
+    # 🔥 Changed Employee → CustomUser (filtered to SALESMAN only)
+    sales_person = models.ForeignKey(
+        "authentication.CustomUser",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        limit_choices_to={"role": "SALESMAN"}
+    )
+
     billing_address = models.TextField(blank=True)
     gst_treatment = models.CharField(max_length=50, blank=True)
     uploads_files = models.FileField(upload_to='recurring_invoice_uploads/', null=True, blank=True, max_length=100)
+
     status = models.CharField(
         max_length=20,
         choices=[
@@ -220,6 +243,16 @@ class RecurringInvoice(models.Model):
         ],
         default='active'
     )
+
+    def save(self, *args, **kwargs):
+        if not self.reference_id:
+            last_invoice = RecurringInvoice.objects.all().order_by('id').last()
+            self.reference_id = f'{self.REFERENCE_PREFIX}{str(1000 + (last_invoice.id + 1) if last_invoice else 1001)}'
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.reference_id
+
 
     def save(self, *args, **kwargs):
         if not self.reference_id:
@@ -258,7 +291,6 @@ class RecurringInvoice(models.Model):
         if self.end_date and next_date > self.end_date:
             return False
         return today >= next_date
-
 
 class RecurringInvoiceItem(models.Model):
     recurring_invoice = models.ForeignKey(RecurringInvoice, on_delete=models.CASCADE, related_name='items')

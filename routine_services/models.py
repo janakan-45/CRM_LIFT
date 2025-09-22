@@ -1,6 +1,7 @@
 from django.db import models
-from authentication.models import Lift, Employee
+from authentication.models import Lift, CustomUser   # ✅ use CustomUser instead of Employee
 from sales.models import Customer, Route
+
 
 class RoutineService(models.Model):
     STATUS_CHOICES = [
@@ -11,7 +12,9 @@ class RoutineService(models.Model):
     lift = models.ForeignKey(Lift, on_delete=models.CASCADE, related_name='routine_services')
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='routine_services')
     route = models.ForeignKey(Route, on_delete=models.SET_NULL, null=True, blank=True)
-    employee = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True)
+
+    # ✅ Changed Employee → CustomUser
+    employee = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='routine_services')
 
     service_date = models.DateField()
     no_of_services = models.PositiveIntegerField(default=0)

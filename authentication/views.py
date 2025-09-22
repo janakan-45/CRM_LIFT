@@ -30,7 +30,7 @@ class IsOwner(BasePermission):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsOwner])
+@permission_classes([IsAuthenticated])
 def check_owner_status(request):
     user = request.user
     return Response({
@@ -318,7 +318,7 @@ def change_password(request):
 ############################ Lift ######################################
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated, ])
 def add_floor_id(request):
     serializer = FloorIDSerializer(data=request.data)
     if serializer.is_valid():
@@ -327,7 +327,7 @@ def add_floor_id(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def edit_floor_id(request, pk):
     try:
         floor_id = FloorID.objects.get(pk=pk)
@@ -343,7 +343,7 @@ def edit_floor_id(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def delete_floor_id(request, pk):
     try:
         floor_id = FloorID.objects.get(pk=pk)
@@ -356,7 +356,7 @@ def delete_floor_id(request, pk):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def add_brand(request):
     serializer = BrandSerializer(data=request.data)
     if serializer.is_valid():
@@ -366,7 +366,7 @@ def add_brand(request):
 
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def edit_brand(request, pk):
     try:
         brand = Brand.objects.get(pk=pk)
@@ -382,7 +382,7 @@ def edit_brand(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def delete_brand(request, pk):
     try:
         brand = Brand.objects.get(pk=pk)
@@ -395,7 +395,7 @@ def delete_brand(request, pk):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def add_machine_type(request):
     serializer = MachineTypeSerializer(data=request.data)
     if serializer.is_valid():
@@ -405,7 +405,7 @@ def add_machine_type(request):
 
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def edit_machine_type(request, pk):
     try:
         machine_type = MachineType.objects.get(pk=pk)
@@ -421,7 +421,7 @@ def edit_machine_type(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def delete_machine_type(request, pk):
     try:
         machine_type = MachineType.objects.get(pk=pk)
@@ -433,7 +433,7 @@ def delete_machine_type(request, pk):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def add_machine_brand(request):
     serializer = MachineBrandSerializer(data=request.data)
     if serializer.is_valid():
@@ -442,7 +442,7 @@ def add_machine_brand(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def edit_machine_brand(request, pk):
     try:
         machine_brand = MachineBrand.objects.get(pk=pk)
@@ -458,7 +458,7 @@ def edit_machine_brand(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def delete_machine_brand(request, pk):
     try:
         machine_brand = MachineBrand.objects.get(pk=pk)
@@ -470,7 +470,7 @@ def delete_machine_brand(request, pk):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def add_door_type(request):
     serializer = DoorTypeSerializer(data=request.data)
     if serializer.is_valid():
@@ -479,7 +479,7 @@ def add_door_type(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def edit_door_type(request, pk):
     try:
         door_type = DoorType.objects.get(pk=pk)
@@ -495,7 +495,7 @@ def edit_door_type(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def delete_door_type(request, pk):
     try:
         door_type = DoorType.objects.get(pk=pk)
@@ -506,7 +506,7 @@ def delete_door_type(request, pk):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def add_door_brand(request):
     serializer = DoorBrandSerializer(data=request.data)
     if serializer.is_valid():
@@ -516,7 +516,7 @@ def add_door_brand(request):
 
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def edit_door_brand(request, pk):
     try:
         door_brand = DoorBrand.objects.get(pk=pk)
@@ -532,7 +532,7 @@ def edit_door_brand(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def delete_door_brand(request, pk):
     try:
         door_brand = DoorBrand.objects.get(pk=pk)
@@ -543,7 +543,7 @@ def delete_door_brand(request, pk):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def add_lift_type(request):
     serializer = LiftTypeSerializer(data=request.data)
     if serializer.is_valid():
@@ -552,7 +552,7 @@ def add_lift_type(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def edit_lift_type(request, pk):
     try:
         lift_type = LiftType.objects.get(pk=pk)
@@ -568,7 +568,7 @@ def edit_lift_type(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def delete_lift_type(request, pk):
     try:
         lift_type = LiftType.objects.get(pk=pk)
@@ -579,7 +579,7 @@ def delete_lift_type(request, pk):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def add_controller_brand(request):
     serializer = ControllerBrandSerializer(data=request.data)
     if serializer.is_valid():
@@ -589,7 +589,7 @@ def add_controller_brand(request):
 
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def edit_controller_brand(request, pk):
     try:
         controller_brand = ControllerBrand.objects.get(pk=pk)
@@ -605,7 +605,7 @@ def edit_controller_brand(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def delete_controller_brand(request, pk):
     try:
         controller_brand = ControllerBrand.objects.get(pk=pk)
@@ -617,7 +617,7 @@ def delete_controller_brand(request, pk):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def add_cabin(request):
     serializer = CabinSerializer(data=request.data)
     if serializer.is_valid():
@@ -626,7 +626,7 @@ def add_cabin(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def edit_cabin(request, pk):
     try:
         cabin = Cabin.objects.get(pk=pk)
@@ -642,7 +642,7 @@ def edit_cabin(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def delete_cabin(request, pk):
     try:
         cabin = Cabin.objects.get(pk=pk)
@@ -889,7 +889,7 @@ def import_lifts_csv(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def add_type(request):
     serializer = TypeSerializer(data=request.data)
     if serializer.is_valid():
@@ -898,7 +898,7 @@ def add_type(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def edit_type(request, pk):
     try:
         type_obj = Type.objects.get(pk=pk)
@@ -914,7 +914,7 @@ def edit_type(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def delete_type(request, pk):
     try:
         type_obj = Type.objects.get(pk=pk)
@@ -925,7 +925,7 @@ def delete_type(request, pk):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def add_make(request):
     serializer = MakeSerializer(data=request.data)
     if serializer.is_valid():
@@ -934,7 +934,7 @@ def add_make(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def edit_make(request, pk):
     try:
         make = Make.objects.get(pk=pk)
@@ -950,7 +950,7 @@ def edit_make(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def delete_make(request, pk):
     try:
         make = Make.objects.get(pk=pk)
@@ -962,7 +962,7 @@ def delete_make(request, pk):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def add_unit(request):
     serializer = UnitSerializer(data=request.data)
     if serializer.is_valid():
@@ -971,7 +971,7 @@ def add_unit(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def edit_unit(request, pk):
     try:
         unit = Unit.objects.get(pk=pk)
@@ -987,7 +987,7 @@ def edit_unit(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def delete_unit(request, pk):
     try:
         unit = Unit.objects.get(pk=pk)
@@ -1177,7 +1177,7 @@ def import_items_csv(request):
 
 ####################################complaints########################################
 @api_view(['POST'])
-@permission_classes([IsAuthenticated, IsOwner])
+@permission_classes([IsAuthenticated])
 def add_employee(request):
     serializer = EmployeeSerializer(data=request.data)
     if serializer.is_valid():
@@ -1226,7 +1226,7 @@ def add_employee(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated, IsOwner])
+@permission_classes([IsAuthenticated])
 def edit_employee(request, pk):
     try:
         employee = Employee.objects.get(pk=pk)
@@ -1259,7 +1259,7 @@ def edit_employee(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated, IsOwner])
+@permission_classes([IsAuthenticated])
 def delete_employee(request, pk):
     try:
         employee = Employee.objects.get(pk=pk)
@@ -1524,3 +1524,119 @@ def print_complaint(request, pk):
     except Exception as e:
         logger.error(f"Unexpected error in print_complaint: {str(e)}")
         return Response({"error": f"Unexpected error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+
+
+    
+# accounts/views.py
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import AllowAny, IsAdminUser
+from .models import CustomUser
+from .serializers import RegisterSerializer, AdminApprovalSerializer, UserProfileSerializer, LoginSerializer
+from .token import get_tokens_for_user
+
+# ---------------- Register Admin Request ----------------
+class RegisterView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = RegisterSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            tokens = get_tokens_for_user(user)
+            return Response({
+                **tokens,
+                "user": {
+                    "id": user.id,
+                    "username": user.username,
+                    "role": user.role
+                }
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# ---------------- Login ----------------
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework import status
+from .serializers import LoginSerializer
+from .token import get_tokens_for_user  # your JWT helper
+
+class LoginView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.validated_data['user']
+            tokens = get_tokens_for_user(user)
+            return Response({
+                **tokens,
+                "user": {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                    "role": user.role
+                }
+            }, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
+
+
+# ---------------- Approve Admin (OWNER only) ----------------
+class ApproveAdminView(APIView):
+    permission_classes = [IsAdminUser]  # Only OWNER can approve
+
+    def patch(self, request, pk):
+        try:
+            user = CustomUser.objects.get(pk=pk)
+            if user.role == "PENDING":
+                user.role = "ADMIN"
+                user.save()
+                return Response({
+                    "id": user.id,
+                    "username": user.username,
+                    "role": user.role
+                }, status=status.HTTP_200_OK)
+            return Response({"error": "User is not pending approval"}, status=400)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "User not found"}, status=404)
+
+# ---------------- Create Salesman (OWNER only) ----------------
+class CreateSalesmanView(APIView):
+    permission_classes = [IsAdminUser]  # Only OWNER
+
+    def post(self, request):
+        username = request.data.get("username")
+        email = request.data.get("email")
+        password = request.data.get("password")
+
+        user = CustomUser.objects.create(
+            username=username,
+            email=email,
+            password=password,
+            role="SALESMAN"
+        )
+        tokens = get_tokens_for_user(user)
+        return Response({
+            **tokens,
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "role": user.role
+            }
+        }, status=status.HTTP_201_CREATED)
+
+# ---------------- List All Users ----------------
+class UserListView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        users = CustomUser.objects.all()
+        serializer = UserProfileSerializer(users, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+

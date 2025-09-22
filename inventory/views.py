@@ -73,6 +73,14 @@ def requisition_list(request):
     requisitions = Requisition.objects.all()
     serializer = RequisitionSerializer(requisitions, many=True)
     return Response(serializer.data)
+from io import BytesIO
+from openpyxl import Workbook
+from openpyxl.utils import get_column_letter
+from django.http import HttpResponse
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from .models import Requisition  # adjust import if needed
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -98,7 +106,12 @@ def export_requisitions_to_excel(request):
         ws[f"{get_column_letter(5)}{row_num}"] = req.site.site_name if req.site else ''
         ws[f"{get_column_letter(6)}{row_num}"] = req.amc_id.reference_id if req.amc_id else ''
         ws[f"{get_column_letter(7)}{row_num}"] = req.service
-        ws[f"{get_column_letter(8)}{row_num}"] = req.employee.name if req.employee else ''
+
+        # 🔥 Changed here → CustomUser instead of old Employee
+        if req.employee:
+            ws[f"{get_column_letter(8)}{row_num}"] = f"{req.employee.username} ({req.employee.email})"
+        else:
+            ws[f"{get_column_letter(8)}{row_num}"] = ''
 
     output = BytesIO()
     wb.save(output)
@@ -111,4 +124,3 @@ def export_requisitions_to_excel(request):
     response.write(output.read())
 
     return response
-

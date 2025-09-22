@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Lift, FloorID, Brand, MachineType, MachineBrand, DoorType, DoorBrand, LiftType, ControllerBrand, Cabin,Complaint, Employee,Customer,Profile
+from .models import Lift, FloorID, Brand, MachineType, MachineBrand, DoorType, DoorBrand, LiftType, ControllerBrand, Cabin,Complaint, Employee,Customer,Profile,CustomUser
 
 
 from rest_framework import serializers
@@ -350,44 +350,51 @@ class ItemSerializer(serializers.ModelSerializer):
 
 
 ##################################complaints########################################
-
 class EmployeeSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False, validators=[validate_password])
     password_confirm = serializers.CharField(write_only=True, required=False)
 
     class Meta:
-        model = Employee
-        fields = ['id', 'username', 'email', 'password', 'password_confirm', 'name']
+        model = CustomUser  # ✅ Use CustomUser instead of old Employee
+        fields = ['id', 'username', 'email', 'password', 'password_confirm', 'role']
         extra_kwargs = {
             'username': {'required': True},
             'email': {'required': True},
-            'name': {'required': False}  # Name is derived from username if not provided
+            'role': {'required': True}  # role will be SALESMAN for employees
         }
 
     def validate(self, data):
+        # Password match validation
         if 'password' in data and 'password_confirm' in data:
             if data['password'] != data['password_confirm']:
                 raise serializers.ValidationError({"password": "Passwords must match."})
-        if 'username' in data and Employee.objects.filter(username__iexact=data['username']).exists():
+
+        # Username uniqueness
+        if 'username' in data and CustomUser.objects.filter(username__iexact=data['username']).exists():
             if not (self.instance and self.instance.username == data['username']):
                 raise serializers.ValidationError({"username": "An employee with this username already exists."})
-        if 'email' in data and Employee.objects.filter(email__iexact=data['email']).exists():
+
+        # Email uniqueness
+        if 'email' in data and CustomUser.objects.filter(email__iexact=data['email']).exists():
             if not (self.instance and self.instance.email == data['email']):
                 raise serializers.ValidationError({"email": "An employee with this email already exists."})
+
         return data
 
     def create(self, validated_data):
         validated_data.pop('password_confirm', None)
         if 'password' in validated_data:
             validated_data['password'] = make_password(validated_data['password'])
+        # Force role to SALESMAN
+        validated_data['role'] = 'SALESMAN'
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
         validated_data.pop('password_confirm', None)
         if 'password' in validated_data:
-            validated_data['password'] = make_password(validated_data['password'])
+            instance.set_password(validated_data['password'])  # 🔥 use set_password
         return super().update(instance, validated_data)
-
+    
 class ComplaintSerializer(serializers.ModelSerializer):
     assign_to = serializers.PrimaryKeyRelatedField(queryset=Employee.objects.all(), write_only=True, required=False)
     assign_to_name = serializers.SerializerMethodField()
@@ -406,3 +413,57 @@ class ComplaintSerializer(serializers.ModelSerializer):
 
     def get_customer_name(self, obj):
         return obj.customer.site_name if obj.customer else None
+    
+        
+# accounts/serializers.py
+from rest_framework import serializers
+from .models import CustomUser
+from django.contrib.auth import authenticate
+
+# ---------------- Register (Admin Request) ----------------
+class RegisterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['username', 'email', 'password']
+
+    def create(self, validated_data):
+        return CustomUser.objects.create(**validated_data)
+
+# ---------------- Approve Admin ----------------
+class AdminApprovalSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['role', 'is_active']
+
+# ---------------- User Profile ----------------
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'username', 'email', 'role', 'is_active', 'date_joined']
+
+# ---------------- Login ----------------
+# serializers.py
+from rest_framework import serializers
+from django.contrib.auth import authenticate
+from authentication.models import CustomUser
+
+from rest_framework import serializers
+from django.contrib.auth import authenticate
+from .models import CustomUser
+
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)
+
+    def validate(self, data):
+        email = data.get("email")
+        password = data.get("password")
+
+        # Authenticate using email backend
+        user = authenticate(email=email, password=password)
+        if user is None:
+            raise serializers.ValidationError("Invalid email or password")
+
+        data['user'] = user
+        return data
+

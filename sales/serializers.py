@@ -177,14 +177,23 @@ class CustomerLicenseSerializer(serializers.ModelSerializer):
 #########################################Quotation Serializer#########################################
 
 from amc.models import AMCType
-from authentication.models import Employee, Lift
+from authentication.models import Employee, Lift, CustomUser
+
 
 class QuotationSerializer(serializers.ModelSerializer):
     customer = serializers.PrimaryKeyRelatedField(queryset=Customer.objects.all(), write_only=True, required=False)
     amc_type = serializers.PrimaryKeyRelatedField(queryset=AMCType.objects.all(), write_only=True, required=False)
-    sales_service_executive = serializers.PrimaryKeyRelatedField(queryset=Employee.objects.all(), write_only=True, required=False)
+
+    # 🔥 Changed Employee → CustomUser (filtered to SALESMAN only)
+    sales_service_executive = serializers.PrimaryKeyRelatedField(
+        queryset=CustomUser.objects.filter(role="SALESMAN"),
+        write_only=True,
+        required=False
+    )
+
     lifts = serializers.PrimaryKeyRelatedField(queryset=Lift.objects.all(), many=True, write_only=True)
 
+    # Read-only fields
     customer_name = serializers.SerializerMethodField()
     amc_type_name = serializers.SerializerMethodField()
     sales_service_executive_name = serializers.SerializerMethodField()
@@ -193,7 +202,8 @@ class QuotationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Quotation
         fields = [
-            'id', 'reference_id', 'customer_name', 'amc_type_name', 'sales_service_executive_name',
+            'id', 'reference_id',
+            'customer_name', 'amc_type_name', 'sales_service_executive_name',
             'lifts', 'type', 'year_of_make', 'date', 'remark', 'other_remark', 'uploads_files',
             'customer', 'amc_type', 'sales_service_executive', 'lift_codes'
         ]
@@ -205,11 +215,11 @@ class QuotationSerializer(serializers.ModelSerializer):
         return obj.amc_type.name if obj.amc_type else None
 
     def get_sales_service_executive_name(self, obj):
-        return obj.sales_service_executive.name if obj.sales_service_executive else None
+        # 🔥 Use username instead of name (since CustomUser has username/email)
+        return obj.sales_service_executive.username if obj.sales_service_executive else None
 
     def get_lift_codes(self, obj):
         return [lift.lift_code for lift in obj.lifts.all()] if obj.lifts.exists() else []
-    
 
 
 #######################invoice Serializer#########################

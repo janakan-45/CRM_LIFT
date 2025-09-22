@@ -3,6 +3,7 @@ from .import views
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework_simplejwt.views import TokenRefreshView
+from authentication.views import RegisterView, LoginView, ApproveAdminView, CreateSalesmanView, UserListView
 
 
 
@@ -96,6 +97,12 @@ urlpatterns = [
     path('delete-complaint/<int:pk>/', views.delete_complaint, name='delete_complaint'),
     path('export-complaints/', views.export_complaints_to_excel, name='export_complaints_to_excel'),
     path('print-complaint/<int:pk>/', views.print_complaint, name='print_complaint'),
+
+    path('r/register/', RegisterView.as_view(), name='register'),
+    path('r/login/', LoginView.as_view(), name='login'),
+    path('r/approve/<int:pk>/', ApproveAdminView.as_view(), name='approve-admin'),
+    path('r/create-salesman/', CreateSalesmanView.as_view(), name='create-salesman'),
+    path('r/users/', UserListView.as_view(), name='user-list'),
 
     
 ]+static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

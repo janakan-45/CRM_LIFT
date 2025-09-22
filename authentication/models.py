@@ -2,6 +2,41 @@ from django.db import models
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import User
 
+from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.db import models
+
+class CustomUserManager(BaseUserManager):
+    def create_user(self, username, email=None, password=None, **extra_fields):
+        if not username:
+            raise ValueError("Username is required")
+        email = self.normalize_email(email)
+        user = self.model(username=username, email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, username, email=None, password=None, **extra_fields):
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+        extra_fields.setdefault("role", "OWNER")  # 🔥 This sets OWNER automatically
+
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Superuser must have is_staff=True")
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError("Superuser must have is_superuser=True")
+        return self.create_user(username, email, password, **extra_fields)
+
+class CustomUser(AbstractUser):
+    ROLE_CHOICES = (
+        ("OWNER", "Owner"),
+        ("ADMIN", "Admin"),
+        ("SALESMAN", "Salesman"),
+        ("PENDING", "Pending")
+    )
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="PENDING")
+
+    objects = CustomUserManager()  # 🔥 Link manager here
+
 
 
 #############################lift########################################
@@ -60,7 +95,7 @@ class Cabin(models.Model):
         return self.value
 
 class Lift(models.Model):
-    lift_code = models.CharField(max_length=10, unique=True)
+    lift_code = models.CharField(max_length=10)
     name = models.CharField(max_length=100)
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     floor_id = models.ForeignKey(FloorID, on_delete=models.SET_NULL, null=True)
@@ -139,53 +174,58 @@ class Item(models.Model):
 
 
 from sales.models import Customer
-
 class Employee(models.Model):
-    username = models.CharField(max_length=150, unique=True,blank=True,null=True)
-    email = models.EmailField(unique=True,blank=True,null=True)
-    password = models.CharField(max_length=128,null=True,blank=True)  # Stores hashed password
-    name = models.CharField(max_length=100, unique=True, blank=True, null=True)
-
-    def save(self, *args, **kwargs):
-        # Hash the password if it has been changed or is new
-        if self.password and not self.password.startswith('pbkdf2_sha256$'):
-            self.password = make_password(self.password)
-        # Ensure name is derived from username if not provided
-        if not self.name:
-            self.name = self.username
-        super().save(*args, **kwargs)
+    name = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
         return self.name
 
+from django.db import models
+from sales.models import Customer
+ # 🔥 Use CustomUser instead of Employee
+  
+
 class Complaint(models.Model):
     REFERENCE_PREFIX = 'CMP'
     reference = models.CharField(max_length=10, unique=True, editable=False)
-    type = models.CharField(max_length=50, choices=[
-        ('Site Inspection', 'Site Inspection'),
-        ('Spec Checking', 'Spec Checking'),
-        ('Break Down Calls', 'Break Down Calls'),
-        ('Service Request', 'Service Request'),
-        ('New Installation', 'New Installation')
-    ])
+    type = models.CharField(
+        max_length=50,
+        choices=[
+            ('Site Inspection', 'Site Inspection'),
+            ('Spec Checking', 'Spec Checking'),
+            ('Break Down Calls', 'Break Down Calls'),
+            ('Service Request', 'Service Request'),
+            ('New Installation', 'New Installation')
+        ]
+    )
     date = models.DateTimeField(auto_now_add=True)
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True)
     contact_person_name = models.CharField(max_length=100, blank=True)
     contact_person_mobile = models.CharField(max_length=15, blank=True)
     block_wing = models.CharField(max_length=50, blank=True)
-    assign_to = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True)
-    priority = models.CharField(max_length=10, choices=[
-        ('Urgent', 'Urgent'),
-        ('High', 'High'),
-        ('Medium', 'Medium'),
-        ('Low', 'Low')
-    ], default='Medium')
+    assign_to = models.ForeignKey(
+        CustomUser,  # ✅ CustomUser instead of Employee
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        limit_choices_to={'role': 'SALESMAN'}  # 🔥 Only SALESMAN can be assigned
+    )
+    priority = models.CharField(
+        max_length=10,
+        choices=[
+            ('Urgent', 'Urgent'),
+            ('High', 'High'),
+            ('Medium', 'Medium'),
+            ('Low', 'Low')
+        ],
+        default='Medium'
+    )
     subject = models.CharField(max_length=200, blank=True)
     message = models.TextField(blank=True)
-    customer_signature = models.TextField(blank=True)  # New field
-    technician_remark = models.TextField(blank=True)  # New field
-    technician_signature = models.TextField(blank=True)  # New field
-    solution = models.TextField(blank=True)  # New field
+    customer_signature = models.TextField(blank=True)
+    technician_remark = models.TextField(blank=True)
+    technician_signature = models.TextField(blank=True)
+    solution = models.TextField(blank=True)
 
     def save(self, *args, **kwargs):
         if not self.reference:
@@ -195,11 +235,24 @@ class Complaint(models.Model):
 
     def __str__(self):
         return self.reference
+
     
 
 
+from django.db import models
+from django.conf import settings  # 🔥 important
 
 class Profile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,  # 👈 use this instead of User
+        on_delete=models.CASCADE
+    )
     phone = models.CharField(max_length=15, blank=True)
     photo = models.ImageField(upload_to='profiles/', blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.user.username} Profile"
+
+
+
+# accounts/models.py

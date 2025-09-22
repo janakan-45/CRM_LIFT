@@ -1,10 +1,11 @@
 from django.db import models
-from authentication.models import Item, Employee
+from authentication.models import Item   # ✅ Item should be from inventory app
+from authentication.models import CustomUser  # ✅ Replace Employee with CustomUser
 from sales.models import Customer
 from amc.models import AMC
 
 
-#####################################requisition models##########################################
+##################################### Requisition Model ##########################################
 class Requisition(models.Model):
     reference_id = models.CharField(max_length=10, unique=True, editable=False)
     date = models.DateField()
@@ -13,9 +14,23 @@ class Requisition(models.Model):
     site = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True, related_name='requisitions')
     amc_id = models.ForeignKey(AMC, on_delete=models.SET_NULL, null=True, blank=True)
     service = models.CharField(max_length=100, blank=True)
-    employee = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True)
-    status = models.CharField(max_length=20, choices=[('OPEN', 'Open'), ('CLOSED', 'Closed')], default='OPEN')
-    approve_for = models.CharField(max_length=20, choices=[('PENDING', 'Pending'), ('APPROVED', 'Approved'), ('REJECTED', 'Rejected')], default='PENDING')
+    employee = models.ForeignKey(   # ✅ changed from Employee to CustomUser
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        limit_choices_to={'role': 'SALESMAN'}  # ✅ restrict only SALESMAN
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=[('OPEN', 'Open'), ('CLOSED', 'Closed')],
+        default='OPEN'
+    )
+    approve_for = models.CharField(
+        max_length=20,
+        choices=[('PENDING', 'Pending'), ('APPROVED', 'Approved'), ('REJECTED', 'Rejected')],
+        default='PENDING'
+    )
 
     def save(self, *args, **kwargs):
         if not self.reference_id:

@@ -6,7 +6,11 @@ class RoutineServiceSerializer(serializers.ModelSerializer):
     customer_ref = serializers.CharField(source='customer.reference_id', read_only=True)
     customer_name = serializers.CharField(source='customer.site_name', read_only=True)
     route_name = serializers.CharField(source='route.name', read_only=True)
-    employee_name = serializers.CharField(source='employee.name', read_only=True)
+
+    # ✅ Use CustomUser fields
+    employee_username = serializers.CharField(source='employee.username', read_only=True)
+    employee_role = serializers.CharField(source='employee.role', read_only=True)
+
     gmap_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -15,7 +19,7 @@ class RoutineServiceSerializer(serializers.ModelSerializer):
             'id', 'lift', 'lift_code',
             'customer', 'customer_ref', 'customer_name',
             'route', 'route_name',
-            'employee', 'employee_name',
+            'employee', 'employee_username', 'employee_role',  # updated here
             'service_date', 'no_of_services', 'status',
             'cust_location', 'latitude', 'longitude', 'gmap_url'
         ]

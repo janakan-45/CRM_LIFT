@@ -56,6 +56,8 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'CRM_LIFT.urls'
+AUTH_USER_MODEL = 'authentication.CustomUser'
+
 
 TEMPLATES = [
     {
@@ -82,9 +84,9 @@ DATABASES = {
           'ENGINE': 'django.db.backends.mysql',
         'NAME': 'defaultdb',
         'USER': 'avnadmin',
-        'PASSWORD':'AVNS_h0wn-zq0tNKsBpCPJwX',
-        'HOST': 'mysql-2f632805-sakthiveljanakan-decf.c.aivencloud.com',
-        'PORT': '11613',
+        'PASSWORD':'AVNS_5uNaULQC5TYGYs6oPAI',
+        'HOST': 'mysql-f711a26-howljana94-2e52.f.aivencloud.com',
+        'PORT': '24091',
 }
 }
 

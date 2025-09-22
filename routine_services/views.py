@@ -3,15 +3,32 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
+from django.http import HttpResponse
+from io import StringIO, BytesIO
+import csv
+import logging
+
 from .models import RoutineService
+from authentication.models import CustomUser  # ✅ Import CustomUser
 from .serializers import RoutineServiceSerializer
 
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+
+logger = logging.getLogger(__name__)
+
+# =====================
+# CRUD for RoutineService
+# =====================
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def list_routine_services(request):
     services = RoutineService.objects.all().select_related('lift', 'customer', 'employee', 'route')
     serializer = RoutineServiceSerializer(services, many=True)
     return Response(serializer.data)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -22,12 +39,14 @@ def add_routine_service(request):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_routine_service(request, pk):
     service = get_object_or_404(RoutineService, pk=pk)
     serializer = RoutineServiceSerializer(service)
     return Response(serializer.data)
+
 
 @api_view(['PUT', 'PATCH'])
 @permission_classes([IsAuthenticated])
@@ -39,6 +58,7 @@ def edit_routine_service(request, pk):
         return Response(serializer.data)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_routine_service(request, pk):
@@ -47,33 +67,23 @@ def delete_routine_service(request, pk):
     return Response({'message': 'Deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
 
 
-
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from django.http import HttpResponse
-from .models import RoutineService
-from io import StringIO
-import csv
-
+# =====================
+# Export to CSV
+# =====================
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def export_routine_services_to_csv(request):
-    # Create a string buffer for CSV
     output = StringIO()
     writer = csv.writer(output)
 
-    # Write headers
     headers = [
         'Customer Reference No', 'Lift Code', 'Service Date', 'Customer Name',
         'Customer Location', 'Employee Name', 'Route Name', 'No. of Services', 'Status'
     ]
     writer.writerow(headers)
 
-    # Fetch all routine services
     routine_services = RoutineService.objects.all().select_related('customer', 'employee', 'route')
 
-    # Write data rows
     for service in routine_services:
         writer.writerow([
             service.customer_ref,
@@ -81,43 +91,27 @@ def export_routine_services_to_csv(request):
             service.service_date.strftime('%Y-%m-%d %H:%M:%S') if service.service_date else '',
             service.customer.site_name if service.customer else '',
             service.customer.site_address if service.customer and hasattr(service.customer, 'site_address') else '',
-            service.employee.name if service.employee else '',
+            service.employee.username if service.employee else '',  # ✅ now using CustomUser
             service.route.route_name if service.route else '',
             service.no_of_services,
             service.status
         ])
 
-    # Prepare HTTP response
     output.seek(0)
     response = HttpResponse(output, content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename=routine_services_export.csv'
     return response
 
 
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework import status
-from django.shortcuts import get_object_or_404
-from .models import RoutineService
-from io import BytesIO
-from django.http import HttpResponse
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-import logging
-
-logger = logging.getLogger(__name__)
-
+# =====================
+# Print Routine Service (PDF)
+# =====================
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def print_routine_service(request, pk):
     try:
-        # Fetch the specific routine service
         routine_service = get_object_or_404(RoutineService, pk=pk)
 
-        # Prepare data
         context = {
             'company_name': 'Atom Lifts India Pvt Ltd',
             'address': 'No.87B, Pillayar Koll Street, Mannurpet, Ambattur Indus Estate, Chennai 50, CHENNAI',
@@ -128,31 +122,29 @@ def print_routine_service(request, pk):
             'lift_code': routine_service.lift_code,
             'customer_name': routine_service.customer.site_name if routine_service.customer else '',
             'customer_location': routine_service.customer.site_address if routine_service.customer and hasattr(routine_service.customer, 'site_address') else '',
-            'employee_name': routine_service.employee.name if routine_service.employee else '',
+            'employee_name': routine_service.employee.username if routine_service.employee else '',  # ✅ CustomUser
+            'employee_role': routine_service.employee.role if routine_service.employee else '',      # ✅ Show role
             'route_name': routine_service.route.route_name if routine_service.route else '',
             'no_of_services': routine_service.no_of_services,
             'status': routine_service.status
         }
 
-        # Create PDF buffer
         buffer = BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=72)
         styles = getSampleStyleSheet()
         story = []
 
-        # Header
         header_style = ParagraphStyle(
             name='HeaderStyle',
             parent=styles['Heading1'],
             fontSize=18,
-            alignment=1  # Center
+            alignment=1
         )
         story.append(Paragraph(context['company_name'], header_style))
         story.append(Paragraph(context['address'], styles['Normal']))
         story.append(Paragraph(f"Phone: {context['phone']} | Email: {context['email']}", styles['Normal']))
         story.append(Spacer(1, 12))
 
-        # Service Details Table
         data = [
             ['Service Reference:', context['service_ref']],
             ['Date:', context['service_date']],
@@ -173,7 +165,6 @@ def print_routine_service(request, pk):
         story.append(table)
         story.append(Spacer(1, 12))
 
-        # Customer Details
         story.append(Paragraph("Customer Details", styles['Heading2']))
         data = [
             ['Customer Name:', context['customer_name']],
@@ -188,17 +179,14 @@ def print_routine_service(request, pk):
         story.append(table)
         story.append(Spacer(1, 12))
 
-        # Service Details
         story.append(Paragraph("Service Details", styles['Heading2']))
-        story.append(Paragraph(f"Employee: {context['employee_name']}", styles['Normal']))
+        story.append(Paragraph(f"Employee: {context['employee_name']} ({context['employee_role']})", styles['Normal']))
         story.append(Paragraph(f"Route: {context['route_name']}", styles['Normal']))
         story.append(Paragraph(f"No. of Services: {context['no_of_services']}", styles['Normal']))
         story.append(Spacer(1, 12))
 
-        # Build PDF
         doc.build(story)
 
-        # Return PDF response
         buffer.seek(0)
         response = HttpResponse(buffer, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename=routine_service_{context["service_ref"]}.pdf'
