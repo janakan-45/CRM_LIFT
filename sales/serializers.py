@@ -5,6 +5,11 @@ from authentication.serializers import LiftSerializer
 from datetime import date, timedelta
 
 #########################################customer Serializer#########################################   
+
+SECTOR_CHOICES = (
+    ('government', 'Government'),
+    ('private', 'Private'),
+)
 class RouteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Route
@@ -21,9 +26,9 @@ class ProvinceStateSerializer(serializers.ModelSerializer):
         fields = ['id', 'value']
 
 class CustomerSerializer(serializers.ModelSerializer):
-    routes = serializers.PrimaryKeyRelatedField(queryset=Route.objects.all(), write_only=True, required=False)
-    branch = serializers.PrimaryKeyRelatedField(queryset=Branch.objects.all(), write_only=True, required=False)
-    province_state = serializers.PrimaryKeyRelatedField(queryset=ProvinceState.objects.all(), write_only=True, required=False)
+    routes = serializers.PrimaryKeyRelatedField(queryset=Route.objects.all(), write_only=True, required=False, allow_null=True)
+    branch = serializers.PrimaryKeyRelatedField(queryset=Branch.objects.all(), write_only=True, required=False,allow_null=True)
+    province_state = serializers.PrimaryKeyRelatedField(queryset=ProvinceState.objects.all(), write_only=True, required=False,allow_null=True)
     lifts = serializers.PrimaryKeyRelatedField(queryset=Lift.objects.all(), many=True, write_only=True, required=False)
 
     generate_customer_license = serializers.BooleanField(write_only=True, required=False, default=False)
@@ -33,6 +38,11 @@ class CustomerSerializer(serializers.ModelSerializer):
     branch_value = serializers.SerializerMethodField()
     province_state_value = serializers.SerializerMethodField()
     lift_codes = serializers.SerializerMethodField()
+    country = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    sector = serializers.ChoiceField(choices=SECTOR_CHOICES, required=False, allow_blank=True, allow_null=True)
+    handover_date = serializers.DateField(required=False, allow_null=True)
+    
+   
 
     class Meta:
         model = Customer
