@@ -1578,11 +1578,13 @@ class LoginView(APIView):
                     "id": user.id,
                     "username": user.username,
                     "email": user.email,
-                    "role": user.role
+                    "role": user.role,
+                    "permissions": user.permissions  # 🔥 include permissions
                 }
             }, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
+
 
 
 # ---------------- Approve Admin (OWNER only) ----------------
@@ -1638,5 +1640,86 @@ class UserListView(APIView):
         serializer = UserProfileSerializer(users, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
+
+
+############################################################################################
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAdminUser
+from rest_framework import status
+from .serializers import CreateUserSerializer, PermissionUpdateSerializer
+from .models import CustomUser
+
+# Create Admin / Salesman (OWNER only)
+class CreateUserView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request):
+        serializer = CreateUserSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            return Response(CreateUserSerializer(user).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# Assign Permissions (OWNER only)
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAdminUser
+from rest_framework.response import Response
+from .models import CustomUser
+from .serializers import UpdatePermissionsSerializer
+
+class UpdatePermissionsView(APIView):
+    permission_classes = [IsAdminUser]  # Only Owner/Admin can update
+
+    def patch(self, request, pk):
+        try:
+            user = CustomUser.objects.get(pk=pk)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "User not found"}, status=404)
+
+        serializer = UpdatePermissionsSerializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=200)
+        return Response(serializer.errors, status=400)
+
+
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAdminUser
+from rest_framework.response import Response
+from .models import CustomUser
+from .serializers import UserProfileSerializer
+from .serializers import UpdatePermissionsSerializer 
+
+class ListUsersView(APIView):
+    permission_classes = [IsAdminUser]  # OWNER only
+
+    def get(self, request):
+        users = CustomUser.objects.exclude(role="OWNER")  # skip OWNER
+        serializer = UserProfileSerializer(users, many=True)
+        return Response(serializer.data)
+
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAdminUser
+from rest_framework.response import Response
+from .models import CustomUser
+
+class PermissionListView(APIView):
+    permission_classes = [IsAdminUser]  # Only OWNER/Admin
+
+    def get(self, request):
+        permissions = [perm[0] for perm in CustomUser.PERMISSION_CHOICES]
+        return Response({"permissions": permissions})
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .models import CustomUser
+
+class ListPermissionsView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        return Response({"permissions": [p[0] for p in CustomUser.PERMISSION_CHOICES]})
+
 
 

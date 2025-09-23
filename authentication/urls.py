@@ -3,14 +3,14 @@ from .import views
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework_simplejwt.views import TokenRefreshView
-from authentication.views import RegisterView, LoginView, ApproveAdminView, CreateSalesmanView, UserListView
+from authentication.views import RegisterView, LoginView, ApproveAdminView, CreateSalesmanView, UserListView,CreateUserView, UpdatePermissionsView , ListUsersView,PermissionListView,ListPermissionsView
 
 
 
 urlpatterns = [
 
     path('register/',views. register, name='register'),
-    path('login/', views.login, name='login'),
+    path('elogin/', views.login, name='login'),
     path('profile/', views.profile, name='profile'),
     path('update-profile/', views.update_profile, name='update_profile'),
     path('forgot-password/', views.forgot_password, name='forgot_password'),
@@ -103,6 +103,14 @@ urlpatterns = [
     path('r/approve/<int:pk>/', ApproveAdminView.as_view(), name='approve-admin'),
     path('r/create-salesman/', CreateSalesmanView.as_view(), name='create-salesman'),
     path('r/users/', UserListView.as_view(), name='user-list'),
+
+
+    path("create-user/", CreateUserView.as_view(), name="create-user"),
+    path("login/", LoginView.as_view(), name="login"),
+    path('list-users/', ListUsersView.as_view(), name='list-users'),
+    path('permissions/', ListPermissionsView.as_view(), name="list-permissions"),
+    path('permissions/<int:pk>/', UpdatePermissionsView.as_view(), name="update-permissions"),
+
 
     
 ]+static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

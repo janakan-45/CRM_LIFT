@@ -451,6 +451,40 @@ from rest_framework import serializers
 from django.contrib.auth import authenticate
 from .models import CustomUser
 
+
+
+
+
+
+##################################################################################
+from rest_framework import serializers
+from django.contrib.auth import authenticate
+from .models import CustomUser
+
+# Create user by OWNER
+class CreateUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ["id", "username", "email", "password", "role", "phone_number"]
+        extra_kwargs = {"password": {"write_only": True}}
+
+    def create(self, validated_data):
+        password = validated_data.pop("password", None)
+        user = CustomUser(**validated_data)
+        if password:
+            user.set_password(password)
+        user.save()
+        return user
+
+
+# Update permissions
+class PermissionUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ["permissions"]
+
+
+# Login serializer
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
@@ -459,11 +493,26 @@ class LoginSerializer(serializers.Serializer):
         email = data.get("email")
         password = data.get("password")
 
-        # Authenticate using email backend
         user = authenticate(email=email, password=password)
         if user is None:
             raise serializers.ValidationError("Invalid email or password")
 
-        data['user'] = user
+        data["user"] = user
         return data
 
+
+# Return user response (login, profile etc.)
+class UserResponseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ["id", "username", "email", "role", "permissions", "phone_number"]
+from rest_framework import serializers
+from .models import CustomUser
+
+from rest_framework import serializers
+from .models import CustomUser
+
+class UpdatePermissionsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ["permissions"]

@@ -5,6 +5,23 @@ from django.contrib.auth.models import User
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 
+from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.db import models
+from django.contrib.postgres.fields import ArrayField  # use PostgreSQL
+# authentication/models.py
+
+from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.db import models
+
+from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.db import models
+from django.contrib.postgres.fields import ArrayField  # PostgreSQL only
+from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.db import models
+from django.contrib.postgres.fields import ArrayField  # Works for PostgreSQL
+# If using SQLite, use JSONField instead
+from django.db.models import JSONField
+
 class CustomUserManager(BaseUserManager):
     def create_user(self, username, email=None, password=None, **extra_fields):
         if not username:
@@ -18,24 +35,41 @@ class CustomUserManager(BaseUserManager):
     def create_superuser(self, username, email=None, password=None, **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
-        extra_fields.setdefault("role", "OWNER")  # 🔥 This sets OWNER automatically
-
-        if extra_fields.get("is_staff") is not True:
-            raise ValueError("Superuser must have is_staff=True")
-        if extra_fields.get("is_superuser") is not True:
-            raise ValueError("Superuser must have is_superuser=True")
+        extra_fields.setdefault("role", "OWNER")
         return self.create_user(username, email, password, **extra_fields)
+
 
 class CustomUser(AbstractUser):
     ROLE_CHOICES = (
         ("OWNER", "Owner"),
         ("ADMIN", "Admin"),
         ("SALESMAN", "Salesman"),
-        ("PENDING", "Pending")
+        ("PENDING", "Pending"),
+        ("TECHNICIAN", "Technician"),
     )
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="PENDING")
 
-    objects = CustomUserManager()  # 🔥 Link manager here
+    PERMISSION_CHOICES = (
+        ("CREATE_SALES", "Create Sales"),
+        ("VIEW_REPORTS", "View Reports"),
+        ("EDIT_CUSTOMER", "Edit Customer"),
+        ("DELETE_CUSTOMER", "Delete Customer"),
+        ("MANAGE_STOCK", "Manage Stock"),
+        # Add more as needed
+    )
+
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="PENDING")
+    phone_number = models.CharField(max_length=15, blank=True, null=True)
+
+    # Use ArrayField for PostgreSQL OR JSONField for SQLite
+    permissions = JSONField(default=list, blank=True)  # stores list of permission strings
+
+    objects = CustomUserManager()
+
+    def __str__(self):
+        return f"{self.username} ({self.role})"
+
+
+
 
 
 
