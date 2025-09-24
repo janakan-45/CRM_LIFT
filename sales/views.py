@@ -19,7 +19,7 @@ class IsOwner(BasePermission):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsOwner])
+@permission_classes([IsAuthenticated])
 def check_owner_status(request):
     user = request.user
     return Response({
@@ -29,7 +29,7 @@ def check_owner_status(request):
 
 # Dynamic dropdown views
 @api_view(['POST'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def add_route(request):
     serializer = RouteSerializer(data=request.data)
     if serializer.is_valid():
@@ -38,7 +38,7 @@ def add_route(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def edit_route(request, pk):
     try:
         route = Route.objects.get(pk=pk)
@@ -54,7 +54,7 @@ def edit_route(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def delete_route(request, pk):
     try:
         route = Route.objects.get(pk=pk)
@@ -64,7 +64,7 @@ def delete_route(request, pk):
         return Response({"error": "Route not found"}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def add_branch(request):
     serializer = BranchSerializer(data=request.data)
     if serializer.is_valid():
@@ -89,7 +89,7 @@ def edit_branch(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def delete_branch(request, pk):
     try:
         branch = Branch.objects.get(pk=pk)
@@ -100,7 +100,7 @@ def delete_branch(request, pk):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def add_province_state(request):
     serializer = ProvinceStateSerializer(data=request.data)
     if serializer.is_valid():
@@ -109,7 +109,7 @@ def add_province_state(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def edit_province_state(request, pk):
     try:
         province_state = ProvinceState.objects.get(pk=pk)
@@ -125,7 +125,7 @@ def edit_province_state(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def delete_province_state(request, pk):
     try:
         province_state = ProvinceState.objects.get(pk=pk)
@@ -165,7 +165,7 @@ from .serializers import CustomerSerializer
 from authentication.models import Lift  # Import Lift model
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated, IsOwner])
+@permission_classes([IsAuthenticated])
 def add_customer(request):
     serializer = CustomerSerializer(data=request.data)
     if serializer.is_valid():
@@ -177,7 +177,7 @@ def add_customer(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated, IsOwner])
+@permission_classes([IsAuthenticated])
 def edit_customer(request, pk):
     try:
         customer = Customer.objects.get(pk=pk)
