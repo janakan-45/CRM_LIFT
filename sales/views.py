@@ -73,7 +73,7 @@ def add_branch(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated,IsOwner])
+@permission_classes([IsAuthenticated])
 def edit_branch(request, pk):
     try:
         branch = Branch.objects.get(pk=pk)
@@ -1021,9 +1021,12 @@ def add_customer_license(request):
             return Response({"error": f"Failed to create license: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+# Modified views.py - Update the customer_license_list view to filter licenses where lift.lift_code == customer.job_no
+from django.db.models import F  # Add this import at the top if not already present
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def customer_license_list(request):
-    licenses = CustomerLicense.objects.select_related('customer', 'lift').all()
+    licenses = CustomerLicense.objects.select_related('customer', 'lift').filter(lift__lift_code=F('customer__job_no'))
     serializer = CustomerLicenseSerializer(licenses, many=True)
     return Response(serializer.data)

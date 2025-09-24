@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Lift, FloorID, Brand, MachineType, MachineBrand, DoorType, DoorBrand, LiftType, ControllerBrand, Cabin,Complaint, Employee,Customer,Profile,CustomUser
+from .models import Lift, FloorID, Brand, MachineType, MachineBrand, DoorType, DoorBrand, LiftType, ControllerBrand, Cabin,Complaint, Employee,Profile,CustomUser
+from sales.models import Customer, CustomerLicense
 
 
 from rest_framework import serializers
@@ -7,6 +8,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.hashers import make_password
 from django.conf import settings
+from datetime import date, timedelta
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
@@ -279,6 +281,29 @@ class LiftSerializer(serializers.ModelSerializer):
     def get_cabin_value(self, obj):
         return obj.cabin.value if obj.cabin else None
     
+    def create(self, validated_data):
+        lift = Lift.objects.create(**validated_data)
+        lift_code = validated_data.get('lift_code', '')
+
+        # Auto-create license if lift_code matches a customer job_no
+        if lift_code:
+            try:
+                from sales.models import Customer,CustomerLicense
+                customer = Customer.objects.get(job_no=lift_code)
+                CustomerLicense.objects.get_or_create(
+                    customer=customer,
+                    lift=lift,
+                    defaults={
+                        "period_start": date.today(),
+                        "period_end": date.today() + timedelta(days=365),
+                    }
+                )
+            except Customer.DoesNotExist:
+                pass  # No matching customer, no license created
+
+        return lift
+
+    
 
 
 #####################################items########################################
@@ -396,20 +421,20 @@ class EmployeeSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
     
 class ComplaintSerializer(serializers.ModelSerializer):
-    assign_to = serializers.PrimaryKeyRelatedField(queryset=Employee.objects.all(), write_only=True, required=False)
+    assign_to = serializers.PrimaryKeyRelatedField(queryset=CustomUser.objects.filter(role='SALESMAN'), write_only=True, required=False)
     assign_to_name = serializers.SerializerMethodField()
     customer = serializers.PrimaryKeyRelatedField(queryset=Customer.objects.all(), write_only=True, required=False)
     customer_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Complaint
-        fields = ['id', 'reference', 'type', 'date', 'customer_name', 'contact_person_name', 
-                  'contact_person_mobile', 'block_wing', 'assign_to_name', 'priority', 
-                  'subject', 'message', 'customer_signature', 'technician_remark', 
+        fields = ['id', 'reference', 'type', 'date', 'customer_name', 'contact_person_name',
+                  'contact_person_mobile', 'block_wing', 'assign_to_name', 'priority',
+                  'subject', 'message', 'customer_signature', 'technician_remark',
                   'technician_signature', 'solution', 'customer', 'assign_to']
 
     def get_assign_to_name(self, obj):
-        return obj.assign_to.name if obj.assign_to else None
+        return obj.assign_to.username if obj.assign_to else None
 
     def get_customer_name(self, obj):
         return obj.customer.site_name if obj.customer else None
