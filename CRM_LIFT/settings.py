@@ -87,6 +87,7 @@ DATABASES = {
         'PASSWORD':'AVNS_TkPHE9xZAA0hIu1AGaW',
         'HOST': 'mysql-2f795dc0-jakanaansj-7eb8.e.aivencloud.com',
         'PORT': '13296',
+        
 }
 }
 
