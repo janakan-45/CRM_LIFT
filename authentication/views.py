@@ -1,4 +1,4 @@
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes,parser_classes
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -53,117 +53,90 @@ def check_employee_status(request):
         'is_employee': True
     }, status=status.HTTP_200_OK)
 
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def register(request):
-    serializer = UserRegistrationSerializer(data=request.data)
-    if serializer.is_valid():
-        user = serializer.save()
+# @api_view(['POST'])
+# @permission_classes([AllowAny])
+# def register(request):
+#     serializer = UserRegistrationSerializer(data=request.data)
+#     if serializer.is_valid():
+#         user = serializer.save()
         
-        # Check if owner group exists, create if it doesn't
-        owner_group, created = Group.objects.get_or_create(name='owner')
+#         # Check if owner group exists, create if it doesn't
+#         owner_group, created = Group.objects.get_or_create(name='owner')
         
-        # Assign user to owner group
-        user.groups.add(owner_group)
+#         # Assign user to owner group
+#         user.groups.add(owner_group)
         
-        refresh = RefreshToken.for_user(user)
+#         refresh = RefreshToken.for_user(user)
 
-        # Send confirmation email
-        subject = 'Welcome to ATOM LIFT - Registration Successful'
-        message = (
-            f"Dear {user.username},\n\n"
-            "Thank you for registering with ATOM LIFT!\n"
-            "Your account has been successfully created with owner privileges.\n\n"
-            "You can now log in using your email and password.\n"
-            "If you have any questions, feel free to contact us.\n\n"
-            "Best regards,\n"
-            "The ATOM LIFT Team"
-        )
-        from_email = f"{settings.EMAIL_SENDER_NAME} <{settings.EMAIL_HOST_USER}>"
-        recipient_list = [user.email]
+#         # Send confirmation email
+#         subject = 'Welcome to ATOM LIFT - Registration Successful'
+#         message = (
+#             f"Dear {user.username},\n\n"
+#             "Thank you for registering with ATOM LIFT!\n"
+#             "Your account has been successfully created with owner privileges.\n\n"
+#             "You can now log in using your email and password.\n"
+#             "If you have any questions, feel free to contact us.\n\n"
+#             "Best regards,\n"
+#             "The ATOM LIFT Team"
+#         )
+#         from_email = f"{settings.EMAIL_SENDER_NAME} <{settings.EMAIL_HOST_USER}>"
+#         recipient_list = [user.email]
 
-        try:
-            send_mail(
-                subject=subject,
-                message=message,
-                from_email=from_email,
-                recipient_list=recipient_list,
-                fail_silently=False,
-            )
-        except Exception as e:
-            # Log the error if needed, but don't fail the registration
-            print(f"Failed to send email: {str(e)}")
+#         try:
+#             send_mail(
+#                 subject=subject,
+#                 message=message,
+#                 from_email=from_email,
+#                 recipient_list=recipient_list,
+#                 fail_silently=False,
+#             )
+#         except Exception as e:
+#             # Log the error if needed, but don't fail the registration
+#             print(f"Failed to send email: {str(e)}")
 
-        return Response({
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
-            'user': serializer.data,
-            'message': 'Registration successful! A confirmation email has been sent to your email address.'
-        }, status=status.HTTP_201_CREATED)
+#         return Response({
+#             'refresh': str(refresh),
+#             'access': str(refresh.access_token),
+#             'user': serializer.data,
+#             'message': 'Registration successful! A confirmation email has been sent to your email address.'
+#         }, status=status.HTTP_201_CREATED)
     
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def login(request):
-    serializer = UserLoginSerializer(data=request.data)
-    if serializer.is_valid():
-        email = serializer.validated_data['email']
-        password = serializer.validated_data['password']
-        # Authenticate using email
-        user = authenticate(email=email, password=password)
-        if user:
-            refresh = RefreshToken.for_user(user)
 
-            # Get the user's group(s)
-            groups = [group.name for group in user.groups.all()]
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import AllowAny
+from django.core.mail import send_mail
+from django.conf import settings
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes
+from .models import CustomUser
+from .serializers import ForgotPasswordSerializer, ResetPasswordSerializer
+from datetime import datetime
 
-            # Send login notification email
-            login_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S %Z')
-            subject = 'ATOM LIFT - Successful Login Notification'
-            message = (
-                f"Dear {user.username},\n\n"
-                "You have successfully logged in to your ATOM LIFT account.\n\n"
-                f"Login Time: {login_time}\n"
-                "If this was not you, please secure your account immediately by changing your password.\n\n"
-                "Best regards,\n"
-                "The ATOM LIFT Team"
-            )
-            from_email = f"{settings.EMAIL_SENDER_NAME} <{settings.EMAIL_HOST_USER}>"
-            recipient_list = [user.email]
-
-            try:
-                send_mail(
-                    subject=subject,
-                    message=message,
-                    from_email=from_email,
-                    recipient_list=recipient_list,
-                    fail_silently=False,
-                )
-            except Exception as e:
-                # Log the error if needed, but don't fail the login
-                print(f"Failed to send login email: {str(e)}")
-
-            return Response({
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-                'user': {
-                    'id': user.id,
-                    'email': user.email,
-                    'username': user.username,
-                    'groups': groups,  # Include the user's group(s)
-                },
-                'message': 'Login successful! A notification email has been sent to your email address.'
-            }, status=status.HTTP_200_OK)
-        return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def forgot_password(request):
     serializer = ForgotPasswordSerializer(data=request.data)
     if serializer.is_valid():
         email = serializer.validated_data['email']
-        user = User.objects.get(email__iexact=email)
+        try:
+            user = CustomUser.objects.get(email__iexact=email)
+            # Check if the user is an OWNER
+            if user.role == 'OWNER':
+                return Response(
+                    {'error': 'Password reset is not allowed for OWNER accounts.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        except CustomUser.DoesNotExist:
+            return Response(
+                {'error': 'No user found with this email address.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         token_generator = PasswordResetTokenGenerator()
         token = token_generator.make_token(user)
         uid = urlsafe_base64_encode(force_bytes(user.pk))
@@ -195,11 +168,15 @@ def forgot_password(request):
             )
         except Exception as e:
             print(f"Failed to send password reset email: {str(e)}")
-            return Response({'error': 'Failed to send password reset email.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {'error': 'Failed to send password reset email.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
-        return Response({
-            'message': 'Password reset email sent successfully.'
-        }, status=status.HTTP_200_OK)
+        return Response(
+            {'message': 'Password reset email sent successfully.'},
+            status=status.HTTP_200_OK
+        )
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -213,107 +190,364 @@ def reset_password(request):
         password = serializer.validated_data['password']
         
         try:
-            from django.utils.http import urlsafe_base64_decode
             user_id = urlsafe_base64_decode(uid).decode()
-            user = User.objects.get(pk=user_id)
-        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-            return Response({'error': 'Invalid user ID.'}, status=status.HTTP_400_BAD_REQUEST)
+            user = CustomUser.objects.get(pk=user_id)
+        except (TypeError, ValueError, OverflowError, CustomUser.DoesNotExist):
+            return Response(
+                {'error': 'Invalid user ID.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         token_generator = PasswordResetTokenGenerator()
         if token_generator.check_token(user, token):
             user.set_password(password)
             user.save()
-            return Response({
-                'message': 'Password reset successfully.'
-            }, status=status.HTTP_200_OK)
+
+            # Send confirmation email
+            subject = 'ATOM LIFT - Password Reset Successful'
+            message = (
+                f"Dear {user.username},\n\n"
+                "Your password for your ATOM LIFT account has been successfully reset.\n"
+                f"Reset Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S %Z')}\n"
+                "If this was not you, please secure your account immediately or contact support.\n\n"
+                "Best regards,\n"
+                "The ATOM LIFT Team"
+            )
+            from_email = f"{settings.EMAIL_SENDER_NAME} <{settings.EMAIL_HOST_USER}>"
+            recipient_list = [user.email]
+
+            try:
+                send_mail(
+                    subject=subject,
+                    message=message,
+                    from_email=from_email,
+                    recipient_list=recipient_list,
+                    fail_silently=False,
+                )
+            except Exception as e:
+                print(f"Failed to send password reset confirmation email: {str(e)}")
+
+            return Response(
+                {'message': 'Password reset successfully. A confirmation email has been sent.'},
+                status=status.HTTP_200_OK
+            )
         else:
-            return Response({'error': 'Invalid or expired token.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': 'Invalid or expired token.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+###############################################################################################
+# from rest_framework.parsers import MultiPartParser, FormParser
+
+
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def profile(request):
+#     try:
+#         profile = request.user.profile
+#     except Profile.DoesNotExist:
+#         profile = Profile.objects.create(user=request.user)
+
+#     serializer = ProfileSerializer(profile, context={'request': request})
+#     return Response(serializer.data)
+
+
+# @api_view(['PUT'])
+# @permission_classes([IsAuthenticated])
+# @parser_classes([MultiPartParser, FormParser])
+# def update_profile(request):
+#     try:
+#         profile = request.user.profile
+#     except Profile.DoesNotExist:
+#         profile = Profile.objects.create(user=request.user)
+
+#     serializer = ProfileSerializer(
+#         profile, data=request.data, partial=True, context={'request': request}
+#     )
+#     if serializer.is_valid():
+#         serializer.save()
+#         return Response(serializer.data, status=status.HTTP_200_OK)
+#     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 
-from rest_framework.decorators import api_view, permission_classes, parser_classes
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def change_password(request):
+#     serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
+#     if serializer.is_valid():
+#         user = request.user
+#         user.set_password(serializer.validated_data['new_password'])
+#         user.save()
+
+#         # Send confirmation email
+#         subject = 'ATOM LIFT - Password Changed Successfully'
+#         message = (
+#             f"Dear {user.username},\n\n"
+#             "Your password for your ATOM LIFT account has been successfully changed.\n"
+#             f"Change Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S %Z')}\n"
+#             "If this was not you, please secure your account immediately or contact support.\n\n"
+#             "Best regards,\n"
+#             "The ATOM LIFT Team"
+#         )
+#         from_email = f"{settings.EMAIL_SENDER_NAME} <{settings.EMAIL_HOST_USER}>"
+#         recipient_list = [user.email]
+
+#         try:
+#             send_mail(
+#                 subject=subject,
+#                 message=message,
+#                 from_email=from_email,
+#                 recipient_list=recipient_list,
+#                 fail_silently=False,
+#             )
+#         except Exception as e:
+#             print(f"Failed to send password change email: {str(e)}")
+
+#         return Response({
+#             'message': 'Password changed successfully. A confirmation email has been sent.'
+#         }, status=status.HTTP_200_OK)
+    
+#     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+from rest_framework.permissions import IsAdminUser
+from rest_framework import status
+from .serializers import CreateUserSerializer, PermissionUpdateSerializer
+from .models import CustomUser
+from django.core.mail import send_mail
+from django.conf import settings
+from datetime import datetime
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAdminUser
+from rest_framework.response import Response
+from .models import CustomUser
+from .serializers import UpdatePermissionsSerializer
+
+class LoginView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.validated_data['user']
+            tokens = get_tokens_for_user(user)
+
+            # Send login notification email
+            login_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S %Z')
+            subject = 'ATOM LIFT - Successful Login Notification'
+            message = (
+                f"Dear {user.username},\n\n"
+                "You have successfully logged in to your ATOM LIFT account.\n\n"
+                f"Login Time: {login_time}\n"
+                "If this was not you, please secure your account immediately by changing your password.\n\n"
+                "Best regards,\n"
+                "The ATOM LIFT Team"
+            )
+            from_email = f"{settings.EMAIL_SENDER_NAME} <{settings.EMAIL_HOST_USER}>"
+            recipient_list = [user.email]
+
+            try:
+                send_mail(
+                    subject=subject,
+                    message=message,
+                    from_email=from_email,
+                    recipient_list=recipient_list,
+                    fail_silently=False,
+                )
+            except Exception as e:
+                # Log the error but don't fail the login
+                print(f"Failed to send login email: {str(e)}")
+
+            return Response({
+                **tokens,
+                "user": {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                    "role": user.role,
+                    "permissions": user.permissions  # include permissions
+                },
+                "message": "Login successful! A notification email has been sent to your email address."
+            }, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
+
+
+# Create Admin / Salesman (OWNER only)
+class CreateUserView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request):
+        serializer = CreateUserSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            return Response(CreateUserSerializer(user).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+# Edit User (OWNER only) - Supports partial updates
+class EditUserView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def patch(self, request, pk):
+        try:
+            user = CustomUser.objects.get(pk=pk)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = CreateUserSerializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            # Handle password update if provided
+            password = serializer.validated_data.pop("password", None)
+            if password:
+                user.set_password(password)
+            user = serializer.save()
+            return Response(CreateUserSerializer(user).data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# Delete User (OWNER only)
+class DeleteUserView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def delete(self, request, pk):
+        try:
+            user = CustomUser.objects.get(pk=pk)
+            user.delete()
+            return Response({"message": "User deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+# Assign Permissions (OWNER only)
+
+class UpdatePermissionsView(APIView):
+    permission_classes = [IsAdminUser]  # Only Owner/Admin can update
+
+    def patch(self, request, pk):
+        try:
+            user = CustomUser.objects.get(pk=pk)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "User not found"}, status=404)
+
+        serializer = UpdatePermissionsSerializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=200)
+        return Response(serializer.errors, status=400)
+
+
+class ListUsersView(APIView):
+    permission_classes = [IsAdminUser]  # OWNER only
+
+    def get(self, request):
+        users = CustomUser.objects.exclude(role="OWNER")  # skip OWNER
+        serializer = UserProfileSerializer(users, many=True)
+        return Response(serializer.data)
+
+
+class PermissionListView(APIView):
+    permission_classes = [IsAdminUser]  # Only OWNER/Admin
+
+    def get(self, request):
+        permissions = [perm[0] for perm in CustomUser.PERMISSION_CHOICES]
+        return Response({"permissions": permissions})
+
+
+class ListPermissionsView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        return Response({"permissions": [p[0] for p in CustomUser.PERMISSION_CHOICES]})
+    
+
+from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
 from .models import Profile
-from .serializers import ProfileSerializer
+from .serializers import ProfileSerializer, ChangePasswordSerializer
+from django.core.mail import send_mail
+from django.conf import settings
+from datetime import datetime
 
+# Profile View (GET to retrieve profile)
+class ProfileView(APIView):
+    permission_classes = [IsAuthenticated]
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def profile(request):
-    try:
-        profile = request.user.profile
-    except Profile.DoesNotExist:
-        profile = Profile.objects.create(user=request.user)
-
-    serializer = ProfileSerializer(profile, context={'request': request})
-    return Response(serializer.data)
-
-
-@api_view(['PUT'])
-@permission_classes([IsAuthenticated])
-@parser_classes([MultiPartParser, FormParser])
-def update_profile(request):
-    try:
-        profile = request.user.profile
-    except Profile.DoesNotExist:
-        profile = Profile.objects.create(user=request.user)
-
-    serializer = ProfileSerializer(
-        profile, data=request.data, partial=True, context={'request': request}
-    )
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-
-
-
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def change_password(request):
-    serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
-    if serializer.is_valid():
-        user = request.user
-        user.set_password(serializer.validated_data['new_password'])
-        user.save()
-
-        # Send confirmation email
-        subject = 'ATOM LIFT - Password Changed Successfully'
-        message = (
-            f"Dear {user.username},\n\n"
-            "Your password for your ATOM LIFT account has been successfully changed.\n"
-            f"Change Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S %Z')}\n"
-            "If this was not you, please secure your account immediately or contact support.\n\n"
-            "Best regards,\n"
-            "The ATOM LIFT Team"
-        )
-        from_email = f"{settings.EMAIL_SENDER_NAME} <{settings.EMAIL_HOST_USER}>"
-        recipient_list = [user.email]
-
+    def get(self, request):
         try:
-            send_mail(
-                subject=subject,
-                message=message,
-                from_email=from_email,
-                recipient_list=recipient_list,
-                fail_silently=False,
-            )
-        except Exception as e:
-            print(f"Failed to send password change email: {str(e)}")
+            profile = request.user.profile
+        except Profile.DoesNotExist:
+            profile = Profile.objects.create(user=request.user)
 
-        return Response({
-            'message': 'Password changed successfully. A confirmation email has been sent.'
-        }, status=status.HTTP_200_OK)
-    
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = ProfileSerializer(profile, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+# Update Profile View (PUT to update profile with multipart support)
+class UpdateProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def put(self, request):
+        try:
+            profile = request.user.profile
+        except Profile.DoesNotExist:
+            profile = Profile.objects.create(user=request.user)
+
+        serializer = ProfileSerializer(
+            profile, data=request.data, partial=True, context={'request': request}
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# Change Password View (POST to change password)
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            user = request.user
+            user.set_password(serializer.validated_data['new_password'])
+            user.save()
+
+            # Send confirmation email
+            subject = 'ATOM LIFT - Password Changed Successfully'
+            message = (
+                f"Dear {user.username},\n\n"
+                "Your password for your ATOM LIFT account has been successfully changed.\n"
+                f"Change Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S %Z')}\n"
+                "If this was not you, please secure your account immediately or contact support.\n\n"
+                "Best regards,\n"
+                "The ATOM LIFT Team"
+            )
+            from_email = f"{settings.EMAIL_SENDER_NAME} <{settings.EMAIL_HOST_USER}>"
+            recipient_list = [user.email]
+
+            try:
+                send_mail(
+                    subject=subject,
+                    message=message,
+                    from_email=from_email,
+                    recipient_list=recipient_list,
+                    fail_silently=False,
+                )
+            except Exception as e:
+                print(f"Failed to send password change email: {str(e)}")
+
+            return Response({
+                'message': 'Password changed successfully. A confirmation email has been sent.'
+            }, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
 
 ############################ Lift ######################################
 
@@ -887,7 +1121,6 @@ def import_lifts_csv(request):
 
 ############################ Items ######################################
 
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_type(request):
@@ -1173,8 +1406,6 @@ def import_items_csv(request):
 
 
 
-
-
 ####################################complaints########################################
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -1369,35 +1600,15 @@ def export_complaints_to_excel(request):
     return response
 
 
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from .models import Complaint
-from io import BytesIO
-from django.http import HttpResponse
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 import logging
-
-logger = logging.getLogger(__name__)
-
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from .models import Complaint
 from io import BytesIO
-from django.http import HttpResponse
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-import logging
 
 logger = logging.getLogger(__name__)
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -1529,197 +1740,88 @@ def print_complaint(request, pk):
 
     
 # accounts/views.py
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAdminUser
 from .models import CustomUser
 from .serializers import RegisterSerializer, AdminApprovalSerializer, UserProfileSerializer, LoginSerializer
 from .token import get_tokens_for_user
 
 # ---------------- Register Admin Request ----------------
-class RegisterView(APIView):
-    permission_classes = [AllowAny]
+# class RegisterView(APIView):
+#     permission_classes = [AllowAny]
 
-    def post(self, request):
-        serializer = RegisterSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.save()
-            tokens = get_tokens_for_user(user)
-            return Response({
-                **tokens,
-                "user": {
-                    "id": user.id,
-                    "username": user.username,
-                    "role": user.role
-                }
-            }, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#     def post(self, request):
+#         serializer = RegisterSerializer(data=request.data)
+#         if serializer.is_valid():
+#             user = serializer.save()
+#             tokens = get_tokens_for_user(user)
+#             return Response({
+#                 **tokens,
+#                 "user": {
+#                     "id": user.id,
+#                     "username": user.username,
+#                     "role": user.role
+#                 }
+#             }, status=status.HTTP_201_CREATED)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# ---------------- Login ----------------
-from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
-from rest_framework import status
-from .serializers import LoginSerializer
-from .token import get_tokens_for_user  # your JWT helper
-
-class LoginView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        serializer = LoginSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.validated_data['user']
-            tokens = get_tokens_for_user(user)
-            return Response({
-                **tokens,
-                "user": {
-                    "id": user.id,
-                    "username": user.username,
-                    "email": user.email,
-                    "role": user.role,
-                    "permissions": user.permissions  # 🔥 include permissions
-                }
-            }, status=status.HTTP_200_OK)
-
-        return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
+# ---------------- Login ---------------
 
 
 
 # ---------------- Approve Admin (OWNER only) ----------------
-class ApproveAdminView(APIView):
-    permission_classes = [IsAdminUser]  # Only OWNER can approve
+# class ApproveAdminView(APIView):
+#     permission_classes = [IsAdminUser]  # Only OWNER can approve
 
-    def patch(self, request, pk):
-        try:
-            user = CustomUser.objects.get(pk=pk)
-            if user.role == "PENDING":
-                user.role = "ADMIN"
-                user.save()
-                return Response({
-                    "id": user.id,
-                    "username": user.username,
-                    "role": user.role
-                }, status=status.HTTP_200_OK)
-            return Response({"error": "User is not pending approval"}, status=400)
-        except CustomUser.DoesNotExist:
-            return Response({"error": "User not found"}, status=404)
+#     def patch(self, request, pk):
+#         try:
+#             user = CustomUser.objects.get(pk=pk)
+#             if user.role == "PENDING":
+#                 user.role = "ADMIN"
+#                 user.save()
+#                 return Response({
+#                     "id": user.id,
+#                     "username": user.username,
+#                     "role": user.role
+#                 }, status=status.HTTP_200_OK)
+#             return Response({"error": "User is not pending approval"}, status=400)
+#         except CustomUser.DoesNotExist:
+#             return Response({"error": "User not found"}, status=404)
 
 # ---------------- Create Salesman (OWNER only) ----------------
-class CreateSalesmanView(APIView):
-    permission_classes = [IsAdminUser]  # Only OWNER
+# class CreateSalesmanView(APIView):
+#     permission_classes = [IsAdminUser]  # Only OWNER
 
-    def post(self, request):
-        username = request.data.get("username")
-        email = request.data.get("email")
-        password = request.data.get("password")
+#     def post(self, request):
+#         username = request.data.get("username")
+#         email = request.data.get("email")
+#         password = request.data.get("password")
 
-        user = CustomUser.objects.create(
-            username=username,
-            email=email,
-            password=password,
-            role="SALESMAN"
-        )
-        tokens = get_tokens_for_user(user)
-        return Response({
-            **tokens,
-            "user": {
-                "id": user.id,
-                "username": user.username,
-                "role": user.role
-            }
-        }, status=status.HTTP_201_CREATED)
+#         user = CustomUser.objects.create(
+#             username=username,
+#             email=email,
+#             password=password,
+#             role="SALESMAN"
+#         )
+#         tokens = get_tokens_for_user(user)
+#         return Response({
+#             **tokens,
+#             "user": {
+#                 "id": user.id,
+#                 "username": user.username,
+#                 "role": user.role
+#             }
+#         }, status=status.HTTP_201_CREATED)
 
 # ---------------- List All Users ----------------
-class UserListView(APIView):
-    permission_classes = [IsAdminUser]
+# class UserListView(APIView):
+#     permission_classes = [IsAdminUser]
 
-    def get(self, request):
-        users = CustomUser.objects.all()
-        serializer = UserProfileSerializer(users, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+#     def get(self, request):
+#         users = CustomUser.objects.all()
+#         serializer = UserProfileSerializer(users, many=True)
+#         return Response(serializer.data, status=status.HTTP_200_OK)
     
 
-
-############################################################################################
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAdminUser
-from rest_framework import status
-from .serializers import CreateUserSerializer, PermissionUpdateSerializer
-from .models import CustomUser
-
-# Create Admin / Salesman (OWNER only)
-class CreateUserView(APIView):
-    permission_classes = [IsAdminUser]
-
-    def post(self, request):
-        serializer = CreateUserSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.save()
-            return Response(CreateUserSerializer(user).data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-# Assign Permissions (OWNER only)
-from rest_framework.views import APIView
-from rest_framework.permissions import IsAdminUser
-from rest_framework.response import Response
-from .models import CustomUser
-from .serializers import UpdatePermissionsSerializer
-
-class UpdatePermissionsView(APIView):
-    permission_classes = [IsAdminUser]  # Only Owner/Admin can update
-
-    def patch(self, request, pk):
-        try:
-            user = CustomUser.objects.get(pk=pk)
-        except CustomUser.DoesNotExist:
-            return Response({"error": "User not found"}, status=404)
-
-        serializer = UpdatePermissionsSerializer(user, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=200)
-        return Response(serializer.errors, status=400)
-
-
-from rest_framework.views import APIView
-from rest_framework.permissions import IsAdminUser
-from rest_framework.response import Response
-from .models import CustomUser
-from .serializers import UserProfileSerializer
-from .serializers import UpdatePermissionsSerializer 
-
-class ListUsersView(APIView):
-    permission_classes = [IsAdminUser]  # OWNER only
-
-    def get(self, request):
-        users = CustomUser.objects.exclude(role="OWNER")  # skip OWNER
-        serializer = UserProfileSerializer(users, many=True)
-        return Response(serializer.data)
-
-from rest_framework.views import APIView
-from rest_framework.permissions import IsAdminUser
-from rest_framework.response import Response
-from .models import CustomUser
-
-class PermissionListView(APIView):
-    permission_classes = [IsAdminUser]  # Only OWNER/Admin
-
-    def get(self, request):
-        permissions = [perm[0] for perm in CustomUser.PERMISSION_CHOICES]
-        return Response({"permissions": permissions})
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from .models import CustomUser
-
-class ListPermissionsView(APIView):
-    permission_classes = [IsAdminUser]
-
-    def get(self, request):
-        return Response({"permissions": [p[0] for p in CustomUser.PERMISSION_CHOICES]})
 
 
 

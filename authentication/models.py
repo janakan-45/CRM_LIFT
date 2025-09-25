@@ -68,11 +68,6 @@ class CustomUser(AbstractUser):
     def __str__(self):
         return f"{self.username} ({self.role})"
 
-
-
-
-
-
 #############################lift########################################
 class FloorID(models.Model):
     value = models.CharField(max_length=10, unique=True)

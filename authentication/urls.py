@@ -3,19 +3,18 @@ from .import views
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework_simplejwt.views import TokenRefreshView
-from authentication.views import RegisterView, LoginView, ApproveAdminView, CreateSalesmanView, UserListView,CreateUserView, UpdatePermissionsView , ListUsersView,PermissionListView,ListPermissionsView
+from authentication.views import  LoginView,CreateUserView, UpdatePermissionsView , ListUsersView,PermissionListView,ListPermissionsView,EditUserView,DeleteUserView,ProfileView,UpdateProfileView
 
 
 
 urlpatterns = [
 
-    path('register/',views. register, name='register'),
-    path('elogin/', views.login, name='login'),
-    path('profile/', views.profile, name='profile'),
-    path('update-profile/', views.update_profile, name='update_profile'),
+    #path('register/',views.register, name='register'),
+    path('profile/', ProfileView.as_view(), name='profile'),
+    path('update-profile/', UpdateProfileView.as_view(), name='update_profile'),
     path('forgot-password/', views.forgot_password, name='forgot_password'),
     path('reset-password/', views.reset_password, name='reset_password'),
-    path('change-password/', views.change_password, name='change_password'),
+    #path('change-password/', views.change_password, name='change_password'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     ############################lift#######################################
     path('add-floor-id/', views.add_floor_id, name='add_floor_id'),
@@ -98,14 +97,19 @@ urlpatterns = [
     path('export-complaints/', views.export_complaints_to_excel, name='export_complaints_to_excel'),
     path('print-complaint/<int:pk>/', views.print_complaint, name='print_complaint'),
 
-    path('r/register/', RegisterView.as_view(), name='register'),
+
+
+###################################logins#################################
+    #path('r/register/', RegisterView.as_view(), name='register'),
     path('r/login/', LoginView.as_view(), name='login'),
-    path('r/approve/<int:pk>/', ApproveAdminView.as_view(), name='approve-admin'),
-    path('r/create-salesman/', CreateSalesmanView.as_view(), name='create-salesman'),
-    path('r/users/', UserListView.as_view(), name='user-list'),
+    #path('r/approve/<int:pk>/', ApproveAdminView.as_view(), name='approve-admin'),
+    #path('r/create-salesman/', CreateSalesmanView.as_view(), name='create-salesman'),
+    #path('r/users/', UserListView.as_view(), name='user-list'),
 
 
     path("create-user/", CreateUserView.as_view(), name="create-user"),
+    path('edit-user/<int:pk>/', EditUserView.as_view(), name='edit-user'),
+    path('delete-user/<int:pk>/', DeleteUserView.as_view(), name='delete-user'),
     path("login/", LoginView.as_view(), name="login"),
     path('list-users/', ListUsersView.as_view(), name='list-users'),
     path('permissions/', ListPermissionsView.as_view(), name="list-permissions"),

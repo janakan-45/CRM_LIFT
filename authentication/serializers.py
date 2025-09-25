@@ -4,7 +4,9 @@ from sales.models import Customer, CustomerLicense
 
 
 from rest_framework import serializers
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+User = get_user_model()
+
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.hashers import make_password
 from django.conf import settings
@@ -44,11 +46,15 @@ class UserLoginSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
     password = serializers.CharField(required=True)
 
+from rest_framework import serializers
+from django.contrib.auth.password_validation import validate_password
+from .models import CustomUser
+
 class ForgotPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
 
     def validate_email(self, value):
-        if not User.objects.filter(email__iexact=value).exists():
+        if not CustomUser.objects.filter(email__iexact=value).exists():
             raise serializers.ValidationError("No user found with this email address.")
         return value
 
@@ -63,7 +69,6 @@ class ResetPasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError({"password": "Passwords must match."})
         return data
 
-
 from django.core.files.images import get_image_dimensions
 
 from rest_framework import serializers
@@ -72,31 +77,21 @@ from .models import Profile
 from django.contrib.auth.models import User
 
 
+from django.contrib.auth import get_user_model
+User = get_user_model()
+
 class ProfileSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(source='user.username')
-    email = serializers.EmailField(source='user.email')
+    username = serializers.CharField(source='user.username', required=False)
+    email = serializers.EmailField(source='user.email', required=False)
     photo = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
         model = Profile
         fields = ['username', 'email', 'phone', 'photo']
 
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        if instance.photo:
-            request = self.context.get('request')
-            if request:
-                # absolute URL for frontend
-                data['photo'] = request.build_absolute_uri(instance.photo.url)
-            else:
-                data['photo'] = settings.MEDIA_URL + str(instance.photo)
-        else:
-            data['photo'] = None
-        return data
-
     def update(self, instance, validated_data):
         user_data = validated_data.pop('user', {})
-        user = instance.user
+        user = instance.user  # This is a CustomUser
 
         if 'username' in user_data:
             if User.objects.filter(username__iexact=user_data['username']).exclude(id=user.id).exists():
