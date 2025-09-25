@@ -4,6 +4,7 @@ from sales.models import Customer
 from sales.serializers import CustomerSerializer
 from authentication.models import Item
 from django.utils import timezone
+from datetime import timedelta
 
 ###################################amc/serializers.py#####################################
 
@@ -41,60 +42,69 @@ class AMCSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, data):
-        # Rule 1: Start date must be today or later
-        today = timezone.now().date()
-        if 'start_date' in data and data['start_date']:
-            if data['start_date'] < today:
-                raise serializers.ValidationError({
-                    "start_date": f"Start date cannot be before {today}."
-                })
+     today = timezone.now().date()
 
-        # Rule 2: End date must be after start date
-        if 'end_date' in data and 'start_date' in data and data['end_date'] and data['start_date']:
-            if data['end_date'] <= data['start_date']:
-                raise serializers.ValidationError({
-                    "end_date": "End date must be after start date."
-                })
-
-        # Rule 3: No of services must be positive
-        if 'no_of_services' in data and data['no_of_services'] is not None:
-            if data['no_of_services'] <= 0:
-                raise serializers.ValidationError({
-                    "no_of_services": "Number of services must be greater than zero."
-                })
-
-        # Rule 4: Price and No of Lifts must be non-negative
-        if 'price' in data and data['price'] < 0:
+    # Rule 1: Start date must be today or later
+     if 'start_date' in data and data['start_date']:
+        if data['start_date'] < today:
             raise serializers.ValidationError({
-                "price": "Price cannot be negative."
-            })
-        if 'no_of_lifts' in data and data['no_of_lifts'] < 0:
-            raise serializers.ValidationError({
-                "no_of_lifts": "Number of lifts cannot be negative."
-            })
-        if 'gst_percentage' in data and data['gst_percentage'] < 0:
-            raise serializers.ValidationError({
-                "gst_percentage": "GST percentage cannot be negative."
+                "start_date": f"Start date cannot be before {today}."
             })
 
+    # Rule 2: End date must be after start date
+     if data.get('end_date') and data.get('start_date'):
+        if data['end_date'] <= data['start_date']:
+            raise serializers.ValidationError({
+                "end_date": "End date must be after start date."
+            })
+
+    # Rule 3: No of services must be positive (only if provided)
+     if data.get('no_of_services') is not None:
+        if data['no_of_services'] <= 0:
+            raise serializers.ValidationError({
+                "no_of_services": "Number of services must be greater than zero."
+            })
+
+    # Rule 4: Price, Lifts, GST must be non-negative (only if provided)
+     if data.get('price') is not None and data['price'] < 0:
+        raise serializers.ValidationError({"price": "Price cannot be negative."})
+     if data.get('no_of_lifts') is not None and data['no_of_lifts'] < 0:
+        raise serializers.ValidationError({"no_of_lifts": "Number of lifts cannot be negative."})
+     if data.get('gst_percentage') is not None and data['gst_percentage'] < 0:
+        raise serializers.ValidationError({"gst_percentage": "GST percentage cannot be negative."})
         # Ensure customer is valid
-        if 'customer' not in data or data['customer'] is None:
+
+     if 'customer' not in data or data['customer'] is None:
             raise serializers.ValidationError({
                 "customer": "A valid customer is required."
             })
 
-        return data
+     return data
 
     def create(self, validated_data):
         customer = validated_data.pop('customer')
+        start_date = validated_data.get('start_date')
+        end_date = validated_data.get('end_date')
+
+        # Default end_date = start_date + 1 year (if not provided)
+        if start_date and not end_date:
+            validated_data['end_date'] = start_date + timedelta(days=365)
+
         return AMC.objects.create(customer=customer, **validated_data)
 
     def update(self, instance, validated_data):
         customer_data = validated_data.pop('customer', None)
         if customer_data:
             instance.customer = customer_data
+
+        start_date = validated_data.get('start_date', instance.start_date)
+        end_date = validated_data.get('end_date')
+
+        # Default end_date = start_date + 1 year (if not provided in update)
+        if start_date and not end_date:
+            validated_data['end_date'] = start_date + timedelta(days=365)
+
         return super().update(instance, validated_data)
-    
 
     def get_created_display(self, obj):
         return obj.created.strftime("%d-%m-%Y %H:%M")  # Format: 31-12-2023 14:30

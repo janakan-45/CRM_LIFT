@@ -2,6 +2,7 @@ from django.db import models
 from sales.models import Customer  # Assuming sales app has Customer model
 from django.utils import timezone
 from authentication.models import Item   
+from datetime import timedelta
 
 ####################################amc/models.py####################################   
 
@@ -37,17 +38,17 @@ class AMC(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
     #uploads_files = models.FileField(upload_to='amc_uploads/', null=True, blank=True, max_length=100)
-    equipment_no = models.CharField(max_length=50, blank=True)
-    notes = models.TextField(blank=True)
+    equipment_no = models.CharField(max_length=50, blank=True,null=True)
+    notes = models.TextField(blank=True, null=True)
     is_generate_contract = models.BooleanField(default=False)
-    no_of_services = models.IntegerField(default=12)
-    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    no_of_lifts = models.IntegerField(default=0)
-    gst_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)
-    total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, editable=False)
-    contract_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, editable=False)
-    total_amount_paid = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    amount_due = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, editable=False)
+    no_of_services = models.IntegerField(default=12,blank=True,null=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00,blank=True,null=True)
+    no_of_lifts = models.IntegerField(default=0,blank=True,null=True)
+    gst_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0.00,blank=True,null=True)
+    total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, editable=False,blank=True,null=True)
+    contract_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, editable=False,blank=True,null=True)
+    total_amount_paid = models.DecimalField(max_digits=10, decimal_places=2, default=0.00,blank=True,null=True)
+    amount_due = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, editable=False,blank=True,null=True)
     amc_service_item = models.ForeignKey(Item, on_delete=models.SET_NULL, null=True, blank=True)
     status = models.CharField(
         max_length=20,
@@ -102,5 +103,10 @@ class AMC(models.Model):
             customer.no_of_lifts = self.no_of_lifts
             customer.contracts = AMC.objects.filter(customer=customer, is_generate_contract=True).count()
             customer.save()
+
+    def save(self, *args, **kwargs):
+        if self.start_date and not self.end_date:
+            self.end_date = self.start_date + timedelta(days=365)
+        super().save(*args, **kwargs)
 
         super().save(*args, **kwargs)
