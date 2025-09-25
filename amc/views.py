@@ -240,12 +240,9 @@ def import_amc_csv(request):
                 return Response({"error": "CSV contains commas in data"}, status=status.HTTP_400_BAD_REQUEST)
 
             # Map CSV columns to AMC model fields
-            # Assuming CSV order: customer_id, invoice_frequency, amc_type_name, payment_terms_name,
-            # start_date, end_date, equipment_no, notes, is_generate_contract, no_of_services,
-            # price, no_of_lifts, gst_percentage, amc_service_item_name
             amc_data = {
                 'customer': CustomerSerializer().get_or_create_customer(customer_id=row[0])[0],  # Custom method to get or create customer
-                'invoice_frequency': row[1] if row[1] in ['annually', 'semi_annually', 'quarterly', 'monthly', 'weekly', 'every_other_weekly'] else 'annually',
+                'invoice_frequency': row[1] if row[1] in ['annually', 'semi_annually', 'quarterly', 'monthly', 'per_service'] else 'annually',
                 'amc_type': AMCType.objects.get_or_create(name=row[2])[0],
                 'payment_terms': PaymentTerms.objects.get_or_create(name=row[3])[0],
                 'start_date': timezone.datetime.strptime(row[4], '%Y-%m-%d').date(),

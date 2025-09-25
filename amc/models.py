@@ -24,12 +24,11 @@ class AMC(models.Model):
     invoice_frequency = models.CharField(
         max_length=20,
         choices=[
-            ('annually', 'Annually'),
+          ('annually', 'Annually'),
             ('semi_annually', 'Semi Annually'),
             ('quarterly', 'Quarterly'),
             ('monthly', 'Monthly'),
-            ('weekly', 'Weekly'),
-            ('every_other_weekly', 'Every Other Weekly')
+            ('per_service', 'Per Service')
         ],
         default='annually'
     )
@@ -50,7 +49,16 @@ class AMC(models.Model):
     total_amount_paid = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     amount_due = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, editable=False)
     amc_service_item = models.ForeignKey(Item, on_delete=models.SET_NULL, null=True, blank=True)
-    status = models.CharField(max_length=20, default='Pending')
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('active', 'Active'),
+            ('expired', 'Expired'),
+            ('cancelled', 'Cancelled'),
+            ('on_hold', 'On Hold')
+        ],
+        default='active'
+    )
     created = models.DateTimeField(auto_now_add=True)
     
 
@@ -79,17 +87,14 @@ class AMC(models.Model):
         # Determine status based on dates and payments
         today = timezone.now().date()
         if self.start_date > today:
-            self.status = 'Pending'
+            self.status = 'on_hold'
         elif self.start_date <= today <= self.end_date:
             if self.amount_due <= Decimal('0'):
-                self.status = 'Paid'
+                self.status = 'active'
             else:
-                self.status = 'Active'
+                self.status = 'active'
         elif today > self.end_date:
-            if self.amount_due <= Decimal('0'):
-                self.status = 'Completed'
-            else:
-                self.status = 'Overdue'
+            self.status = 'expired'
 
         # Update Customer's no_of_lifts and contracts if is_generate_contract is True
         if self.is_generate_contract:
