@@ -25,10 +25,39 @@ class ProvinceStateSerializer(serializers.ModelSerializer):
         model = ProvinceState
         fields = ['id', 'value']
 
+# serializers.py
+from rest_framework import serializers
+from .models import Customer, Route, Branch, ProvinceState, Quotation, Invoice, RecurringInvoiceItem, RecurringInvoice, PaymentReceived, InvoiceItem, CustomerLicense
+from authentication.models import Lift
+from authentication.serializers import LiftSerializer
+from datetime import date, timedelta
+
+######################################### Customer Serializer #########################################   
+
+SECTOR_CHOICES = (
+    ('government', 'Government'),
+    ('private', 'Private'),
+)
+
+class RouteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Route
+        fields = ['id', 'value']
+
+class BranchSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Branch
+        fields = ['id', 'value']
+
+class ProvinceStateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProvinceState
+        fields = ['id', 'value']
+
 class CustomerSerializer(serializers.ModelSerializer):
     routes = serializers.PrimaryKeyRelatedField(queryset=Route.objects.all(), write_only=True, required=False, allow_null=True)
-    branch = serializers.PrimaryKeyRelatedField(queryset=Branch.objects.all(), write_only=True, required=False,allow_null=True)
-    province_state = serializers.PrimaryKeyRelatedField(queryset=ProvinceState.objects.all(), write_only=True, required=False,allow_null=True)
+    branch = serializers.PrimaryKeyRelatedField(queryset=Branch.objects.all(), write_only=True, required=False, allow_null=True)
+    province_state = serializers.PrimaryKeyRelatedField(queryset=ProvinceState.objects.all(), write_only=True, required=False, allow_null=True)
     lifts = serializers.PrimaryKeyRelatedField(queryset=Lift.objects.all(), many=True, write_only=True, required=False)
 
     generate_customer_license = serializers.BooleanField(write_only=True, required=False, default=False)
@@ -41,8 +70,6 @@ class CustomerSerializer(serializers.ModelSerializer):
     country = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     sector = serializers.ChoiceField(choices=SECTOR_CHOICES, required=False, allow_blank=True, allow_null=True)
     handover_date = serializers.DateField(required=False, allow_null=True)
-    
-   
 
     class Meta:
         model = Customer
@@ -82,10 +109,41 @@ class CustomerSerializer(serializers.ModelSerializer):
         customer.no_of_lifts = len(lifts_data)
         customer.save()
 
-        # Auto-create license if job_no matches a lift_code
-        if job_no:
-            try:
-                lift = Lift.objects.get(lift_code=job_no)
+        if generate_license:
+            # Create license for job_no if it matches a lift_code
+            if job_no:
+                try:
+                    lift = Lift.objects.get(lift_code=job_no)
+                    CustomerLicense.objects.get_or_create(
+                        customer=customer,
+                        lift=lift,
+                        defaults={
+                            "period_start": date.today(),
+                            "period_end": date.today() + timedelta(days=365),
+                        }
+                    )
+                except Lift.DoesNotExist:
+                    pass  # No matching lift, no license created
+
+            # Create license for explicit lift_code
+            if lift_code:
+                try:
+                    lift = Lift.objects.get(lift_code=lift_code)
+                    CustomerLicense.objects.get_or_create(
+                        customer=customer,
+                        lift=lift,
+                        defaults={
+                            "period_start": date.today(),
+                            "period_end": date.today() + timedelta(days=365),
+                        }
+                    )
+                except Lift.DoesNotExist:
+                    raise serializers.ValidationError({"lift_code": "No lift found with the provided lift code."})
+                except Exception as e:
+                    raise serializers.ValidationError({"error": f"Failed to create license: {str(e)}"})
+
+            # Create licenses for selected lifts
+            for lift in lifts_data:
                 CustomerLicense.objects.get_or_create(
                     customer=customer,
                     lift=lift,
@@ -94,26 +152,10 @@ class CustomerSerializer(serializers.ModelSerializer):
                         "period_end": date.today() + timedelta(days=365),
                     }
                 )
-            except Lift.DoesNotExist:
-                pass  # No matching lift, no license created
-
-        # Existing license creation logic for explicit lift_code
-        if generate_license and lift_code:
-            try:
-                lift = Lift.objects.get(lift_code=lift_code)
-                CustomerLicense.objects.create(
-                    customer=customer,
-                    lift=lift,
-                    period_start=date.today(),
-                    period_end=date.today() + timedelta(days=365)
-                )
-            except Lift.DoesNotExist:
-                raise serializers.ValidationError({"lift_code": "No lift found with the provided lift code."})
-            except Exception as e:
-                raise serializers.ValidationError({"error": f"Failed to create license: {str(e)}"})
 
         return customer
 
+    # ------------------ Update ------------------
     def update(self, instance, validated_data):
         generate_license = validated_data.pop('generate_customer_license', False)
         lift_code = validated_data.pop('lift_code', None)
@@ -125,54 +167,59 @@ class CustomerSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
 
-        # Update lifts and licenses
-        if lifts_data is not None:
-            instance.lifts.set(lifts_data)
-            instance.no_of_lifts = len(lifts_data)
-            instance.save()
+        if generate_license:
+            # Update lifts if provided
+            if lifts_data is not None:
+                instance.lifts.set(lifts_data)
+                instance.no_of_lifts = len(lifts_data)
+                instance.save()
 
-            # Ensure licenses for all selected lifts
-            for lift in lifts_data:
-                CustomerLicense.objects.get_or_create(
-                    customer=instance,
-                    lift=lift,
-                    defaults={
-                        "period_start": date.today(),
-                        "period_end": date.today() + timedelta(days=365),
-                    }
-                )
-            CustomerLicense.objects.filter(customer=instance).exclude(lift__in=lifts_data).delete()
+                # Create licenses for all selected lifts
+                for lift in lifts_data:
+                    CustomerLicense.objects.get_or_create(
+                        customer=instance,
+                        lift=lift,
+                        defaults={
+                            "period_start": date.today(),
+                            "period_end": date.today() + timedelta(days=365),
+                        }
+                    )
+                # Delete licenses for lifts no longer associated
+                CustomerLicense.objects.filter(customer=instance).exclude(lift__in=lifts_data).delete()
 
-        # Auto-create license if job_no matches a lift_code
-        if job_no:
-            try:
-                lift = Lift.objects.get(lift_code=job_no)
-                CustomerLicense.objects.get_or_create(
-                    customer=instance,
-                    lift=lift,
-                    defaults={
-                        "period_start": date.today(),
-                        "period_end": date.today() + timedelta(days=365),
-                    }
-                )
-            except Lift.DoesNotExist:
-                pass  # No matching lift, no license created
+            # Create license for job_no if it matches a lift_code
+            if job_no:
+                try:
+                    lift = Lift.objects.get(lift_code=job_no)
+                    CustomerLicense.objects.get_or_create(
+                        customer=instance,
+                        lift=lift,
+                        defaults={
+                            "period_start": date.today(),
+                            "period_end": date.today() + timedelta(days=365),
+                        }
+                    )
+                except Lift.DoesNotExist:
+                    pass  # No matching lift, no license created
 
-        # Existing license creation for explicit lift_code
-        if lift_code:
-            try:
-                lift = Lift.objects.get(lift_code=lift_code)
-                CustomerLicense.objects.get_or_create(
-                    customer=instance,
-                    lift=lift,
-                    defaults={
-                        "period_start": date.today(),
-                        "period_end": date.today() + timedelta(days=365),
-                    }
-                )
-            except Lift.DoesNotExist:
-                raise serializers.ValidationError({"lift_code": "No lift found with the provided lift code."})
+            # Create license for explicit lift_code
+            if lift_code:
+                try:
+                    lift = Lift.objects.get(lift_code=lift_code)
+                    CustomerLicense.objects.get_or_create(
+                        customer=instance,
+                        lift=lift,
+                        defaults={
+                            "period_start": date.today(),
+                            "period_end": date.today() + timedelta(days=365),
+                        }
+                    )
+                except Lift.DoesNotExist:
+                    raise serializers.ValidationError({"lift_code": "No lift found with the provided lift code."})
+                except Exception as e:
+                    raise serializers.ValidationError({"error": f"Failed to create license: {str(e)}"})
 
+        # If generate_customer_license is False, do not create or delete licenses
         return instance
 
 class CustomerLicenseSerializer(serializers.ModelSerializer):
@@ -181,18 +228,20 @@ class CustomerLicenseSerializer(serializers.ModelSerializer):
     customer_name = serializers.SerializerMethodField()
     lift_details = LiftSerializer(source='lift', read_only=True)
     license_no = serializers.CharField(read_only=True)
-    handover_date = serializers.DateField(source='customer.handover_date', read_only=True)  # ✅ Add this
+    handover_date = serializers.DateField(source='customer.handover_date', read_only=True)
 
     class Meta:
         model = CustomerLicense
         fields = [
             'id', 'license_no', 'customer_name', 'lift_details',
-            'period_start', 'period_end', 'handover_date',  # ✅ include handover_date
+            'period_start', 'period_end', 'handover_date',
             'attachment', 'customer', 'lift'
         ]
 
     def get_customer_name(self, obj):
         return obj.customer.site_name if obj.customer else None
+
+# ... (rest of the serializers remain unchanged)
 
 #########################################Quotation Serializer#########################################
 
