@@ -223,8 +223,12 @@ class CustomerSerializer(serializers.ModelSerializer):
         return instance
 
 class CustomerLicenseSerializer(serializers.ModelSerializer):
-    customer = serializers.PrimaryKeyRelatedField(queryset=Customer.objects.all(), write_only=True)
-    lift = serializers.PrimaryKeyRelatedField(queryset=Lift.objects.all(), write_only=True)
+    customer = serializers.PrimaryKeyRelatedField(
+        queryset=Customer.objects.all(), write_only=True, required=False
+    )
+    lift = serializers.PrimaryKeyRelatedField(
+        queryset=Lift.objects.all(), write_only=True, required=False
+    )
     customer_name = serializers.SerializerMethodField()
     lift_details = LiftSerializer(source='lift', read_only=True)
     license_no = serializers.CharField(read_only=True)
@@ -237,9 +241,16 @@ class CustomerLicenseSerializer(serializers.ModelSerializer):
             'period_start', 'period_end', 'handover_date',
             'attachment', 'customer', 'lift'
         ]
+        extra_kwargs = {
+            "period_start": {"required": False},
+            "period_end": {"required": False},
+            "customer": {"required": False},
+            "lift": {"required": False},
+        }
 
     def get_customer_name(self, obj):
         return obj.customer.site_name if obj.customer else None
+
 
 # ... (rest of the serializers remain unchanged)
 

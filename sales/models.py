@@ -29,7 +29,7 @@ SECTOR_CHOICES = (
 class Customer(models.Model):
     reference_id = models.CharField(max_length=10, unique=True, editable=False)
     site_id = models.CharField(max_length=30)   # Added Site ID
-    job_no = models.CharField(max_length=50, blank=True)
+    job_no = models.CharField(max_length=50, blank=True, unique=True)
     site_name = models.CharField(max_length=100)
     site_address = models.TextField()
     email = models.EmailField(unique=True)
@@ -362,9 +362,9 @@ class CustomerLicense(models.Model):
     REFERENCE_PREFIX = 'LC'
     license_no = models.CharField(max_length=10, unique=True, editable=False)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='licenses')
-    lift = models.ForeignKey(Lift, on_delete=models.CASCADE)
-    period_start = models.DateField()
-    period_end = models.DateField()
+    lift = models.ForeignKey(Lift, on_delete=models.CASCADE, null=True, blank=True)  # now optional
+    period_start = models.DateField(null=True, blank=True)  # now optional
+    period_end = models.DateField(null=True, blank=True)    # now optional
     attachment = models.FileField(upload_to='license_attachments/', null=True, blank=True, max_length=100)
 
     def save(self, *args, **kwargs):
@@ -375,4 +375,3 @@ class CustomerLicense(models.Model):
 
     def __str__(self):
         return self.license_no
-
