@@ -22,16 +22,19 @@ class AMCSerializer(serializers.ModelSerializer):
     customer = serializers.PrimaryKeyRelatedField(queryset=Customer.objects.all(), write_only=True)
     customer_name = serializers.CharField(source='customer.site_name', read_only=True)
     customer_id = serializers.IntegerField(source='customer.id', read_only=True)
+    customer_address = serializers.CharField(source='customer.site_address', read_only=True)  # <-- declared
     amc_type_name = serializers.CharField(source='amc_type.name', read_only=True)
     payment_terms_name = serializers.CharField(source='payment_terms.name', read_only=True)
     amc_service_item_name = serializers.CharField(source='amc_service_item.name', read_only=True)
     created_display = serializers.SerializerMethodField()
+    customer_address = serializers.CharField(source='customer.site_address', read_only=True)  # 🆕 show customer site address
+    latitude = serializers.CharField(required=False, allow_blank=True, allow_null=True)  # 🆕
 
     class Meta:
         model = AMC
         fields = [
-            'id', 'customer', 'customer_id', 'customer_name', 
-            'reference_id', 'amcname', 'invoice_frequency', 
+            'id', 'customer', 'customer_id', 'customer_name', 'customer_address',
+            'reference_id', 'amcname', 'invoice_frequency','latitude', 
             'amc_type', 'amc_type_name', 'payment_terms', 
             'payment_terms_name', 'start_date', 'end_date', 
             'equipment_no', 'notes', 'is_generate_contract',
@@ -90,6 +93,10 @@ class AMCSerializer(serializers.ModelSerializer):
         if start_date and not end_date:
             validated_data['end_date'] = start_date + timedelta(days=365)
 
+        # 🆕 auto-fill latitude from customer.site_address if not provided
+        if not validated_data.get("latitude"):
+            validated_data["latitude"] = customer.site_address
+
         return AMC.objects.create(customer=customer, **validated_data)
 
     def update(self, instance, validated_data):
@@ -103,6 +110,10 @@ class AMCSerializer(serializers.ModelSerializer):
         # Default end_date = start_date + 1 year (if not provided in update)
         if start_date and not end_date:
             validated_data['end_date'] = start_date + timedelta(days=365)
+
+        # 🆕 auto-update latitude if not manually provided
+        if customer_data and not validated_data.get("latitude"):
+            validated_data["latitude"] = customer_data.site_address
 
         return super().update(instance, validated_data)
 

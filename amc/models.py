@@ -22,6 +22,7 @@ class AMC(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     reference_id = models.CharField(max_length=10, unique=True, editable=False)
     amcname = models.CharField(max_length=100, blank=True)  # New field for AMC name
+    latitude = models.CharField(max_length=255, blank=True, null=True)#site address stored
     invoice_frequency = models.CharField(
         max_length=20,
         choices=[
@@ -64,49 +65,41 @@ class AMC(models.Model):
     
 
     def save(self, *args, **kwargs):
-        if not self.reference_id:
-            last_amc = AMC.objects.all().order_by('id').last()
-            if last_amc:
+    # Auto-generate reference_id
+     if not self.reference_id:
+        last_amc = AMC.objects.all().order_by('id').last()
+        if last_amc:
+            try:
                 last_id = int(last_amc.reference_id.replace('AMC', ''))
-                self.reference_id = f'AMC{str(last_id + 1).zfill(2)}'
-            else:
-                self.reference_id = 'AMC01'
-    
-        if self.is_generate_contract:
-            from decimal import Decimal
-            self.total = Decimal(str(self.price)) * Decimal(str(self.no_of_lifts)) * (Decimal('1') + Decimal(str(self.gst_percentage)) / Decimal('100'))
-    
-        self.contract_amount = self.total
-    
-        # Ensure total_amount_paid is properly initialized (default is 0.00)
-        if not hasattr(self, 'total_amount_paid') or self.total_amount_paid is None:
-            self.total_amount_paid = Decimal('0.00')
-    
-        # Calculate amount_due with proper decimal handling
-        self.amount_due = Decimal(str(self.contract_amount)) - Decimal(str(self.total_amount_paid))
+            except ValueError:
+                last_id = 0
+            self.reference_id = f'AMC{str(last_id + 1).zfill(2)}'
+        else:
+            self.reference_id = 'AMC01'
 
-        # Determine status based on dates and payments
-        today = timezone.now().date()
-        if self.start_date > today:
-            self.status = 'on_hold'
-        elif self.start_date <= today <= self.end_date:
-            if self.amount_due <= Decimal('0'):
-                self.status = 'active'
-            else:
-                self.status = 'active'
-        elif today > self.end_date:
-            self.status = 'expired'
+    # Default end_date = start_date + 1 year
+     if self.start_date and not self.end_date:
+        self.end_date = self.start_date + timedelta(days=365)
 
-        # Update Customer's no_of_lifts and contracts if is_generate_contract is True
-        if self.is_generate_contract:
-            customer = self.customer
-            customer.no_of_lifts = self.no_of_lifts
-            customer.contracts = AMC.objects.filter(customer=customer, is_generate_contract=True).count()
-            customer.save()
+    # Calculate totals
+     from decimal import Decimal
+     if self.is_generate_contract:
+        self.total = Decimal(str(self.price)) * Decimal(str(self.no_of_lifts)) * (
+            Decimal('1') + Decimal(str(self.gst_percentage)) / Decimal('100')
+        )
 
-    def save(self, *args, **kwargs):
-        if self.start_date and not self.end_date:
-            self.end_date = self.start_date + timedelta(days=365)
-        super().save(*args, **kwargs)
+     self.contract_amount = self.total or 0
+     if self.total_amount_paid is None:
+        self.total_amount_paid = Decimal('0.00')
+     self.amount_due = Decimal(str(self.contract_amount)) - Decimal(str(self.total_amount_paid))
 
-        super().save(*args, **kwargs)
+    # Status calculation
+     today = timezone.now().date()
+     if self.start_date > today:
+        self.status = 'on_hold'
+     elif self.start_date <= today <= self.end_date:
+        self.status = 'active'
+     elif today > self.end_date:
+        self.status = 'expired'
+
+     super().save(*args, **kwargs)
