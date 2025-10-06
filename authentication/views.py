@@ -104,7 +104,18 @@ def check_employee_status(request):
 #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import AllowAny
+from django.core.mail import send_mail
+from django.conf import settings
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes
 from .models import CustomUser
+from .serializers import ForgotPasswordSerializer, ResetPasswordSerializer
+from datetime import datetime
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -302,8 +313,17 @@ def reset_password(request):
 #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
+from rest_framework.permissions import IsAdminUser
+from rest_framework import status
 from .serializers import CreateUserSerializer, PermissionUpdateSerializer
+from .models import CustomUser
+from django.core.mail import send_mail
+from django.conf import settings
+from datetime import datetime
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAdminUser
+from rest_framework.response import Response
+from .models import CustomUser
 from .serializers import UpdatePermissionsSerializer
 
 class LoginView(APIView):
@@ -443,9 +463,14 @@ class ListPermissionsView(APIView):
     
 
 from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from .models import Profile
 from .serializers import ProfileSerializer, ChangePasswordSerializer
+from django.core.mail import send_mail
+from django.conf import settings
+from datetime import datetime
 
 # Profile View (GET to retrieve profile)
 class ProfileView(APIView):
@@ -523,7 +548,6 @@ class ChangePasswordView(APIView):
 
 
 
-###################################################################################################################################################
 
 ############################ Lift ######################################
 
@@ -1035,7 +1059,6 @@ def export_lifts_to_excel(request):
 
 import csv
 import io
-import openpyxl
 
 
 # @api_view(['POST'])
@@ -1094,9 +1117,9 @@ import openpyxl
 #         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+import openpyxl
 
-
-
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def import_lifts_csv(request):
     if 'file' not in request.FILES:
@@ -1159,7 +1182,8 @@ def import_lifts_csv(request):
 
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
+
+
 
 
 ############################ Items ######################################
@@ -1446,12 +1470,9 @@ def export_items_to_excel(request):
 
 #     except Exception as e:
 #         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
 
-from rest_framework.decorators import api_view, permission_classes
-import csv
-import io
-import openpyxl
+
+
 
 
 @api_view(['POST'])
@@ -1516,9 +1537,6 @@ def import_items_csv(request):
 
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-
 ####################################complaints########################################
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
