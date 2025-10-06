@@ -1035,51 +1035,119 @@ def export_lifts_to_excel(request):
 
 import csv
 import io
+import openpyxl
 
 
-@api_view(['POST'])
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def import_lifts_csv(request):
+#     if 'file' not in request.FILES:
+#         return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+
+#     csv_file = request.FILES['file']
+#     if not csv_file.name.endswith('.csv'):
+#         return Response({"error": "File is not a CSV"}, status=status.HTTP_400_BAD_REQUEST)
+
+#     try:
+#         decoded_file = csv_file.read().decode('utf-8')
+#         io_string = io.StringIO(decoded_file)
+#         reader = csv.reader(io_string, delimiter=',')
+#         next(reader)  # Skip header row
+#         for row in reader:
+#             if not row:  # Skip blank rows
+#                 continue
+#             if any(',' in field for field in row):  # Check for commas in data
+#                 return Response({"error": "CSV contains commas in data"}, status=status.HTTP_400_BAD_REQUEST)
+
+#             # Map CSV columns to Lift model fields
+#             # Assuming CSV order: lift_code, name, price, model, no_of_passengers, load_kg, speed,
+#             # floor_id_value, brand_value, lift_type_value, machine_type_value, machine_brand_value,
+#             # door_type_value, door_brand_value, controller_brand_value, cabin_value
+#             lift_data = {
+#                 'lift_code': row[0],
+#                 'name': row[1],
+#                 'price': float(row[2]) if row[2] else 0.00,
+#                 'model': row[3],
+#                 'no_of_passengers': row[4],
+#                 'load_kg': row[5],
+#                 'speed': row[6],
+#                 # Map foreign key values to their IDs based on 'value' fields
+#                 'floor_id': FloorID.objects.get_or_create(value=row[7])[0],
+#                 'brand': Brand.objects.get_or_create(value=row[8])[0],
+#                 'lift_type': LiftType.objects.get_or_create(value=row[9])[0],
+#                 'machine_type': MachineType.objects.get_or_create(value=row[10])[0],
+#                 'machine_brand': MachineBrand.objects.get_or_create(value=row[11])[0],
+#                 'door_type': DoorType.objects.get_or_create(value=row[12])[0],
+#                 'door_brand': DoorBrand.objects.get_or_create(value=row[13])[0],
+#                 'controller_brand': ControllerBrand.objects.get_or_create(value=row[14])[0],
+#                 'cabin': Cabin.objects.get_or_create(value=row[15])[0],
+#             }
+#             serializer = LiftSerializer(data=lift_data)
+#             if serializer.is_valid():
+#                 serializer.save()
+#             else:
+#                 return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+#         return Response({"message": "Lifts imported successfully!"}, status=status.HTTP_201_CREATED)
+
+#     except Exception as e:
+#         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
 @permission_classes([IsAuthenticated])
 def import_lifts_csv(request):
     if 'file' not in request.FILES:
         return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
 
-    csv_file = request.FILES['file']
-    if not csv_file.name.endswith('.csv'):
-        return Response({"error": "File is not a CSV"}, status=status.HTTP_400_BAD_REQUEST)
+    uploaded_file = request.FILES['file']
+    file_name = uploaded_file.name.lower()
+    
+    if not (file_name.endswith('.csv') or file_name.endswith('.xlsx')):
+        return Response({"error": "File must be CSV or Excel (.xlsx)"}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        decoded_file = csv_file.read().decode('utf-8')
-        io_string = io.StringIO(decoded_file)
-        reader = csv.reader(io_string, delimiter=',')
-        next(reader)  # Skip header row
-        for row in reader:
-            if not row:  # Skip blank rows
+        if file_name.endswith('.csv'):
+            decoded_file = uploaded_file.read().decode('utf-8')
+            io_string = io.StringIO(decoded_file)
+            reader = csv.reader(io_string, delimiter=',')
+            next(reader)  # Skip header row
+            rows = reader
+        else:  # Excel file
+            workbook = openpyxl.load_workbook(uploaded_file)
+            worksheet = workbook.active
+            rows = worksheet.iter_rows(min_row=2, values_only=True)  # Skip header row
+
+        for row in rows:
+            if not row or all(cell is None or cell == '' for cell in row):  # Skip blank rows
                 continue
-            if any(',' in field for field in row):  # Check for commas in data
+                
+            if file_name.endswith('.csv') and any(',' in str(field) for field in row if field):  # Check for commas in CSV data
                 return Response({"error": "CSV contains commas in data"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Map CSV columns to Lift model fields
-            # Assuming CSV order: lift_code, name, price, model, no_of_passengers, load_kg, speed,
+            # Map columns to Lift model fields
+            # Assuming order: lift_code, name, price, model, no_of_passengers, load_kg, speed,
             # floor_id_value, brand_value, lift_type_value, machine_type_value, machine_brand_value,
             # door_type_value, door_brand_value, controller_brand_value, cabin_value
             lift_data = {
-                'lift_code': row[0],
-                'name': row[1],
+                'lift_code': str(row[0]) if row[0] else '',
+                'name': str(row[1]) if row[1] else '',
                 'price': float(row[2]) if row[2] else 0.00,
-                'model': row[3],
-                'no_of_passengers': row[4],
-                'load_kg': row[5],
-                'speed': row[6],
-                # Map foreign key values to their IDs based on 'value' fields
-                'floor_id': FloorID.objects.get_or_create(value=row[7])[0],
-                'brand': Brand.objects.get_or_create(value=row[8])[0],
-                'lift_type': LiftType.objects.get_or_create(value=row[9])[0],
-                'machine_type': MachineType.objects.get_or_create(value=row[10])[0],
-                'machine_brand': MachineBrand.objects.get_or_create(value=row[11])[0],
-                'door_type': DoorType.objects.get_or_create(value=row[12])[0],
-                'door_brand': DoorBrand.objects.get_or_create(value=row[13])[0],
-                'controller_brand': ControllerBrand.objects.get_or_create(value=row[14])[0],
-                'cabin': Cabin.objects.get_or_create(value=row[15])[0],
+                'model': str(row[3]) if row[3] else '',
+                'no_of_passengers': str(row[4]) if row[4] else '',
+                'load_kg': str(row[5]) if row[5] else '',
+                'speed': str(row[6]) if row[6] else '',
+                'floor_id': FloorID.objects.get_or_create(value=str(row[7]))[0] if row[7] else None,
+                'brand': Brand.objects.get_or_create(value=str(row[8]))[0] if row[8] else None,
+                'lift_type': LiftType.objects.get_or_create(value=str(row[9]))[0] if row[9] else None,
+                'machine_type': MachineType.objects.get_or_create(value=str(row[10]))[0] if row[10] else None,
+                'machine_brand': MachineBrand.objects.get_or_create(value=str(row[11]))[0] if row[11] else None,
+                'door_type': DoorType.objects.get_or_create(value=str(row[12]))[0] if row[12] else None,
+                'door_brand': DoorBrand.objects.get_or_create(value=str(row[13]))[0] if row[13] else None,
+                'controller_brand': ControllerBrand.objects.get_or_create(value=str(row[14]))[0] if row[14] else None,
+                'cabin': Cabin.objects.get_or_create(value=str(row[15]))[0] if row[15] else None,
             }
             serializer = LiftSerializer(data=lift_data)
             if serializer.is_valid():
@@ -1091,9 +1159,8 @@ def import_lifts_csv(request):
 
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-
+    
+    
 
 ############################ Items ######################################
 
