@@ -218,38 +218,101 @@ def export_amc_to_excel(request):
 
     return response
 
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def import_amc_csv(request):
+#     if 'file' not in request.FILES:
+#         return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+
+#     csv_file = request.FILES['file']
+#     if not csv_file.name.endswith('.csv'):
+#         return Response({"error": "File is not a CSV"}, status=status.HTTP_400_BAD_REQUEST)
+
+#     try:
+#         decoded_file = csv_file.read().decode('utf-8')
+#         io_string = io.StringIO(decoded_file)
+#         reader = csv.reader(io_string, delimiter=',')
+#         next(reader)  # Skip header row
+#         for row in reader:
+#             if not row:  # Skip blank rows
+#                 continue
+#             if any(',' in field for field in row):  # Check for commas in data
+#                 return Response({"error": "CSV contains commas in data"}, status=status.HTTP_400_BAD_REQUEST)
+
+#             # Map CSV columns to AMC model fields
+#             amc_data = {
+#                 'customer': CustomerSerializer().get_or_create_customer(customer_id=row[0])[0],  # Custom method to get or create customer
+#                 'invoice_frequency': row[1] if row[1] in ['annually', 'semi_annually', 'quarterly', 'monthly', 'per_service'] else 'annually',
+#                 'amc_type': AMCType.objects.get_or_create(name=row[2])[0],
+#                 'payment_terms': PaymentTerms.objects.get_or_create(name=row[3])[0],
+#                 'start_date': timezone.datetime.strptime(row[4], '%Y-%m-%d').date(),
+#                 'end_date': timezone.datetime.strptime(row[5], '%Y-%m-%d').date(),
+#                 'equipment_no': row[6] if row[6] else '',
+#                 'notes': row[7] if row[7] else '',
+#                 'is_generate_contract': row[8].lower() == 'true' if row[8] else False,
+#                 'no_of_services': int(row[9]) if row[9] else 12,
+#                 'price': float(row[10]) if row[10] else 0.00,
+#                 'no_of_lifts': int(row[11]) if row[11] else 0,
+#                 'gst_percentage': float(row[12]) if row[12] else 0.00,
+#                 'amc_service_item': Item.objects.get_or_create(name=row[13])[0] if row[13] else None,
+#             }
+#             serializer = AMCSerializer(data=amc_data)
+#             if serializer.is_valid():
+#                 serializer.save()
+#             else:
+#                 return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+#         return Response({"message": "AMC details imported successfully!"}, status=status.HTTP_201_CREATED)
+
+#     except Exception as e:
+#         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+import io
+import openpyxl
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def import_amc_csv(request):
     if 'file' not in request.FILES:
         return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
 
-    csv_file = request.FILES['file']
-    if not csv_file.name.endswith('.csv'):
-        return Response({"error": "File is not a CSV"}, status=status.HTTP_400_BAD_REQUEST)
+    uploaded_file = request.FILES['file']
+    file_name = uploaded_file.name.lower()
+    
+    if not (file_name.endswith('.csv') or file_name.endswith('.xlsx')):
+        return Response({"error": "File must be CSV or Excel (.xlsx)"}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        decoded_file = csv_file.read().decode('utf-8')
-        io_string = io.StringIO(decoded_file)
-        reader = csv.reader(io_string, delimiter=',')
-        next(reader)  # Skip header row
-        for row in reader:
-            if not row:  # Skip blank rows
+        if file_name.endswith('.csv'):
+            decoded_file = uploaded_file.read().decode('utf-8')
+            io_string = io.StringIO(decoded_file)
+            reader = csv.reader(io_string, delimiter=',')
+            next(reader)  # Skip header row
+            rows = reader
+        else:  # Excel file
+            workbook = openpyxl.load_workbook(uploaded_file)
+            worksheet = workbook.active
+            rows = worksheet.iter_rows(min_row=2, values_only=True)  # Skip header row
+
+        for row in rows:
+            if not row or all(cell is None or cell == '' for cell in row):  # Skip blank rows
                 continue
-            if any(',' in field for field in row):  # Check for commas in data
+                
+            if file_name.endswith('.csv') and any(',' in str(field) for field in row if field):  # Check for commas in CSV data
                 return Response({"error": "CSV contains commas in data"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Map CSV columns to AMC model fields
+            # Map columns to AMC model fields
             amc_data = {
-                'customer': CustomerSerializer().get_or_create_customer(customer_id=row[0])[0],  # Custom method to get or create customer
+                'customer': CustomerSerializer().get_or_create_customer(row[0])[0],  # Custom method to get or create customer
                 'invoice_frequency': row[1] if row[1] in ['annually', 'semi_annually', 'quarterly', 'monthly', 'per_service'] else 'annually',
                 'amc_type': AMCType.objects.get_or_create(name=row[2])[0],
                 'payment_terms': PaymentTerms.objects.get_or_create(name=row[3])[0],
-                'start_date': timezone.datetime.strptime(row[4], '%Y-%m-%d').date(),
-                'end_date': timezone.datetime.strptime(row[5], '%Y-%m-%d').date(),
-                'equipment_no': row[6] if row[6] else '',
-                'notes': row[7] if row[7] else '',
-                'is_generate_contract': row[8].lower() == 'true' if row[8] else False,
+                'start_date': timezone.datetime.strptime(str(row[4]), '%Y-%m-%d').date() if row[4] else None,
+                'end_date': timezone.datetime.strptime(str(row[5]), '%Y-%m-%d').date() if row[5] else None,
+                'equipment_no': str(row[6]) if row[6] else '',
+                'notes': str(row[7]) if row[7] else '',
+                'is_generate_contract': str(row[8]).lower() == 'true' if row[8] else False,
                 'no_of_services': int(row[9]) if row[9] else 12,
                 'price': float(row[10]) if row[10] else 0.00,
                 'no_of_lifts': int(row[11]) if row[11] else 0,
