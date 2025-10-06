@@ -253,52 +253,136 @@ import csv
 import io
 from django.utils import timezone
 
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def import_customers_csv(request):
+#     if 'file' not in request.FILES:
+#         return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+
+#     csv_file = request.FILES['file']
+#     if not csv_file.name.endswith('.csv'):
+#         return Response({"error": "File is not a CSV"}, status=status.HTTP_400_BAD_REQUEST)
+
+#     try:
+#         decoded_file = csv_file.read().decode('utf-8')
+#         io_string = io.StringIO(decoded_file)
+#         reader = csv.reader(io_string, delimiter=',')
+#         next(reader)  # Skip header row
+#         for row in reader:
+#             if not row:  # Skip blank rows
+#                 continue
+#             if any(',' in field for field in row):  # Check for commas in data
+#                 return Response({"error": "CSV contains commas in data"}, status=status.HTTP_400_BAD_REQUEST)
+
+#             # Map CSV columns to Customer model fields
+#             # Assuming CSV order: site_id, job_no, site_name, site_address, email, phone, office_address,
+#             # contact_person_name, designation, pin_code, country, province_state_value, city, sector,
+#             # routes_value, branch_value, handover_date, billing_name, pan_number, gst_number, uploads_files
+#             customer_data = {
+#                 'site_id': row[0] if row[0] else '',
+#                 'job_no': row[1] if row[1] else '',
+#                 'site_name': row[2] if row[2] else '',
+#                 'site_address': row[3] if row[3] else '',
+#                 'email': row[4] if row[4] else '',
+#                 'phone': row[5] if row[5] else '',
+#                 'office_address': row[6] if row[6] else '',
+#                 'contact_person_name': row[7] if row[7] else '',
+#                 'designation': row[8] if row[8] else '',
+#                 'pin_code': row[9] if row[9] else '',
+#                 'country': row[10] if row[10] else '',
+#                 'province_state': ProvinceState.objects.get_or_create(value=row[11])[0] if row[11] else None,
+#                 'city': row[12] if row[12] else '',
+#                 'sector': row[13] if row[13] in ['government', 'private'] else 'private',
+#                 'routes': Route.objects.get_or_create(value=row[14])[0] if row[14] else None,
+#                 'branch': Branch.objects.get_or_create(value=row[15])[0] if row[15] else None,
+#                 'handover_date': timezone.datetime.strptime(row[16], '%Y-%m-%d').date() if row[16] else None,
+#                 'billing_name': row[17] if row[17] else '',
+#                 'pan_number': row[18] if row[18] else '',
+#                 'gst_number': row[19] if row[19] else '',
+#                 'active_mobile': int(row[20]) if row[20] else 0,
+#                 'expired_mobile': int(row[21]) if row[21] else 0,
+#                 'contracts': int(row[22]) if row[22] else 0,
+#                 'no_of_lifts': int(row[23]) if row[23] else 0,
+#                 'completed_services': int(row[24]) if row[24] else 0,
+#                 'due_services': int(row[25]) if row[25] else 0,
+#                 'overdue_services': int(row[26]) if row[26] else 0,
+#                 'tickets': int(row[27]) if row[27] else 0,
+#                 'uploads_files': row[28] if row[28] else None,
+#             }
+#             serializer = CustomerSerializer(data=customer_data)
+#             if serializer.is_valid():
+#                 serializer.save()
+#             else:
+#                 return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+#         return Response({"message": "Customers imported successfully!"}, status=status.HTTP_201_CREATED)
+
+#     except Exception as e:
+#         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+import openpyxl
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def import_customers_csv(request):
     if 'file' not in request.FILES:
         return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
 
-    csv_file = request.FILES['file']
-    if not csv_file.name.endswith('.csv'):
-        return Response({"error": "File is not a CSV"}, status=status.HTTP_400_BAD_REQUEST)
+    uploaded_file = request.FILES['file']
+    file_name = uploaded_file.name.lower()
+    
+    if not (file_name.endswith('.csv') or file_name.endswith('.xlsx')):
+        return Response({"error": "File must be CSV or Excel (.xlsx)"}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        decoded_file = csv_file.read().decode('utf-8')
-        io_string = io.StringIO(decoded_file)
-        reader = csv.reader(io_string, delimiter=',')
-        next(reader)  # Skip header row
-        for row in reader:
-            if not row:  # Skip blank rows
+        if file_name.endswith('.csv'):
+            decoded_file = uploaded_file.read().decode('utf-8')
+            io_string = io.StringIO(decoded_file)
+            reader = csv.reader(io_string, delimiter=',')
+            next(reader)  # Skip header row
+            rows = reader
+        else:  # Excel file
+            workbook = openpyxl.load_workbook(uploaded_file)
+            worksheet = workbook.active
+            rows = worksheet.iter_rows(min_row=2, values_only=True)  # Skip header row
+
+        for row in rows:
+            if not row or all(cell is None or cell == '' for cell in row):  # Skip blank rows
                 continue
-            if any(',' in field for field in row):  # Check for commas in data
+                
+            if file_name.endswith('.csv') and any(',' in str(field) for field in row if field):  # Check for commas in CSV data
                 return Response({"error": "CSV contains commas in data"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Map CSV columns to Customer model fields
-            # Assuming CSV order: site_id, job_no, site_name, site_address, email, phone, office_address,
+            # Map columns to Customer model fields
+            # Assuming order: site_id, job_no, site_name, site_address, email, phone, office_address,
             # contact_person_name, designation, pin_code, country, province_state_value, city, sector,
-            # routes_value, branch_value, handover_date, billing_name, pan_number, gst_number, uploads_files
+            # routes_value, branch_value, handover_date, billing_name, pan_number, gst_number,
+            # active_mobile, expired_mobile, contracts, no_of_lifts, completed_services, due_services,
+            # overdue_services, tickets, uploads_files
             customer_data = {
-                'site_id': row[0] if row[0] else '',
-                'job_no': row[1] if row[1] else '',
-                'site_name': row[2] if row[2] else '',
-                'site_address': row[3] if row[3] else '',
-                'email': row[4] if row[4] else '',
-                'phone': row[5] if row[5] else '',
-                'office_address': row[6] if row[6] else '',
-                'contact_person_name': row[7] if row[7] else '',
-                'designation': row[8] if row[8] else '',
-                'pin_code': row[9] if row[9] else '',
-                'country': row[10] if row[10] else '',
-                'province_state': ProvinceState.objects.get_or_create(value=row[11])[0] if row[11] else None,
-                'city': row[12] if row[12] else '',
-                'sector': row[13] if row[13] in ['government', 'private'] else 'private',
-                'routes': Route.objects.get_or_create(value=row[14])[0] if row[14] else None,
-                'branch': Branch.objects.get_or_create(value=row[15])[0] if row[15] else None,
-                'handover_date': timezone.datetime.strptime(row[16], '%Y-%m-%d').date() if row[16] else None,
-                'billing_name': row[17] if row[17] else '',
-                'pan_number': row[18] if row[18] else '',
-                'gst_number': row[19] if row[19] else '',
+                'site_id': str(row[0]) if row[0] else '',
+                'job_no': str(row[1]) if row[1] else '',
+                'site_name': str(row[2]) if row[2] else '',
+                'site_address': str(row[3]) if row[3] else '',
+                'email': str(row[4]) if row[4] else '',
+                'phone': str(row[5]) if row[5] else '',
+                'office_address': str(row[6]) if row[6] else '',
+                'contact_person_name': str(row[7]) if row[7] else '',
+                'designation': str(row[8]) if row[8] else '',
+                'pin_code': str(row[9]) if row[9] else '',
+                'country': str(row[10]) if row[10] else '',
+                'province_state': ProvinceState.objects.get_or_create(value=str(row[11]))[0] if row[11] else None,
+                'city': str(row[12]) if row[12] else '',
+                'sector': str(row[13]) if row[13] in ['government', 'private'] else 'private',
+                'routes': Route.objects.get_or_create(value=str(row[14]))[0] if row[14] else None,
+                'branch': Branch.objects.get_or_create(value=str(row[15]))[0] if row[15] else None,
+                'handover_date': timezone.datetime.strptime(str(row[16]), '%Y-%m-%d').date() if row[16] else None,
+                'billing_name': str(row[17]) if row[17] else '',
+                'pan_number': str(row[18]) if row[18] else '',
+                'gst_number': str(row[19]) if row[19] else '',
                 'active_mobile': int(row[20]) if row[20] else 0,
                 'expired_mobile': int(row[21]) if row[21] else 0,
                 'contracts': int(row[22]) if row[22] else 0,
@@ -307,7 +391,7 @@ def import_customers_csv(request):
                 'due_services': int(row[25]) if row[25] else 0,
                 'overdue_services': int(row[26]) if row[26] else 0,
                 'tickets': int(row[27]) if row[27] else 0,
-                'uploads_files': row[28] if row[28] else None,
+                'uploads_files': str(row[28]) if row[28] else None,
             }
             serializer = CustomerSerializer(data=customer_data)
             if serializer.is_valid():
@@ -869,7 +953,6 @@ def export_recurring_invoices_to_excel(request):
     response.write(output.read())
 
     return response
-
 
 
 
