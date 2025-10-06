@@ -23,6 +23,11 @@ from rest_framework.permissions import BasePermission
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from rest_framework.parsers import MultiPartParser, FormParser
 
+from rest_framework.permissions import AllowAny, IsAdminUser
+from .models import CustomUser
+from .serializers import RegisterSerializer, AdminApprovalSerializer, UserProfileSerializer, LoginSerializer
+from .token import get_tokens_for_user
+
 
 class IsOwner(BasePermission):
     def has_permission(self, request, view):
@@ -1160,7 +1165,7 @@ def import_lifts_csv(request):
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-    
+
 
 ############################ Items ######################################
 
@@ -1394,47 +1399,113 @@ def export_items_to_excel(request):
 
     return response
 
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def import_items_csv(request):
+#     if 'file' not in request.FILES:
+#         return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+
+#     csv_file = request.FILES['file']
+#     if not csv_file.name.endswith('.csv'):
+#         return Response({"error": "File is not a CSV"}, status=status.HTTP_400_BAD_REQUEST)
+
+#     try:
+#         decoded_file = csv_file.read().decode('utf-8')
+#         io_string = io.StringIO(decoded_file)
+#         reader = csv.reader(io_string, delimiter=',')
+#         next(reader)  # Skip header row
+#         for row in reader:
+#             if not row:  # Skip blank rows
+#                 continue
+#             if any(',' in field or not field.isalnum() for field in row):  # Check for commas or special characters
+#                 return Response({"error": "CSV contains commas or special characters"}, status=status.HTTP_400_BAD_REQUEST)
+
+#             # Map CSV columns to Item model fields
+#             # Assuming CSV order: item_number, name, make_value, model, type_value, capacity,
+#             # threshold_qty, sale_price, service_type, tax_preference, unit_value,
+#             # sac_code, igst, gst, description
+#             item_data = {
+#                 'item_number': row[0],
+#                 'name': row[1],
+#                 'make': Make.objects.get_or_create(value=row[2])[0],
+#                 'model': row[3],
+#                 'type': Type.objects.get_or_create(value=row[4])[0],
+#                 'capacity': row[5],
+#                 'threshold_qty': int(row[6]) if row[6] else 0,
+#                 'sale_price': float(row[7]) if row[7] else 0.00,
+#                 'service_type': row[8] if row[8] in ['Services', 'Goods'] else 'Goods',
+#                 'tax_preference': row[9] if row[9] in ['Non-Taxable', 'Taxable'] else 'Non-Taxable',
+#                 'unit': Unit.objects.get_or_create(value=row[10])[0],
+#                 'sac_code': row[11] if row[11] else None,
+#                 'igst': float(row[12]) if row[12] else None,
+#                 'gst': float(row[13]) if row[13] else None,
+#                 'description': row[14] if row[14] else None,
+#             }
+#             serializer = ItemSerializer(data=item_data)
+#             if serializer.is_valid():
+#                 serializer.save()
+#             else:
+#                 return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+#         return Response({"message": "Items imported successfully!"}, status=status.HTTP_201_CREATED)
+
+#     except Exception as e:
+#         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def import_items_csv(request):
     if 'file' not in request.FILES:
         return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
 
-    csv_file = request.FILES['file']
-    if not csv_file.name.endswith('.csv'):
-        return Response({"error": "File is not a CSV"}, status=status.HTTP_400_BAD_REQUEST)
+    uploaded_file = request.FILES['file']
+    file_name = uploaded_file.name.lower()
+    
+    if not (file_name.endswith('.csv') or file_name.endswith('.xlsx')):
+        return Response({"error": "File must be CSV or Excel (.xlsx)"}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        decoded_file = csv_file.read().decode('utf-8')
-        io_string = io.StringIO(decoded_file)
-        reader = csv.reader(io_string, delimiter=',')
-        next(reader)  # Skip header row
-        for row in reader:
-            if not row:  # Skip blank rows
+        if file_name.endswith('.csv'):
+            decoded_file = uploaded_file.read().decode('utf-8')
+            io_string = io.StringIO(decoded_file)
+            reader = csv.reader(io_string, delimiter=',')
+            next(reader)  # Skip header row
+            rows = reader
+        else:  # Excel file
+            workbook = openpyxl.load_workbook(uploaded_file)
+            worksheet = workbook.active
+            rows = worksheet.iter_rows(min_row=2, values_only=True)  # Skip header row
+
+        for row in rows:
+            if not row or all(cell is None or cell == '' for cell in row):  # Skip blank rows
                 continue
-            if any(',' in field or not field.isalnum() for field in row):  # Check for commas or special characters
+                
+            if file_name.endswith('.csv') and any(',' in str(field) or not str(field).isalnum() for field in row if field):  # Check for commas or special characters in CSV
                 return Response({"error": "CSV contains commas or special characters"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Map CSV columns to Item model fields
-            # Assuming CSV order: item_number, name, make_value, model, type_value, capacity,
+            # Map columns to Item model fields
+            # Assuming order: item_number, name, make_value, model, type_value, capacity,
             # threshold_qty, sale_price, service_type, tax_preference, unit_value,
             # sac_code, igst, gst, description
             item_data = {
-                'item_number': row[0],
-                'name': row[1],
-                'make': Make.objects.get_or_create(value=row[2])[0],
-                'model': row[3],
-                'type': Type.objects.get_or_create(value=row[4])[0],
-                'capacity': row[5],
+                'item_number': str(row[0]) if row[0] else '',
+                'name': str(row[1]) if row[1] else '',
+                'make': Make.objects.get_or_create(value=str(row[2]))[0] if row[2] else None,
+                'model': str(row[3]) if row[3] else '',
+                'type': Type.objects.get_or_create(value=str(row[4]))[0] if row[4] else None,
+                'capacity': str(row[5]) if row[5] else '',
                 'threshold_qty': int(row[6]) if row[6] else 0,
                 'sale_price': float(row[7]) if row[7] else 0.00,
-                'service_type': row[8] if row[8] in ['Services', 'Goods'] else 'Goods',
-                'tax_preference': row[9] if row[9] in ['Non-Taxable', 'Taxable'] else 'Non-Taxable',
-                'unit': Unit.objects.get_or_create(value=row[10])[0],
-                'sac_code': row[11] if row[11] else None,
+                'service_type': str(row[8]) if row[8] in ['Services', 'Goods'] else 'Goods',
+                'tax_preference': str(row[9]) if row[9] in ['Non-Taxable', 'Taxable'] else 'Non-Taxable',
+                'unit': Unit.objects.get_or_create(value=str(row[10]))[0] if row[10] else None,
+                'sac_code': str(row[11]) if row[11] else None,
                 'igst': float(row[12]) if row[12] else None,
                 'gst': float(row[13]) if row[13] else None,
-                'description': row[14] if row[14] else None,
+                'description': str(row[14]) if row[14] else None,
             }
             serializer = ItemSerializer(data=item_data)
             if serializer.is_valid():
@@ -1450,6 +1521,7 @@ def import_items_csv(request):
 
 
 ####################################complaints########################################
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_employee(request):
@@ -1783,10 +1855,7 @@ def print_complaint(request, pk):
 
     
 # accounts/views.py
-from rest_framework.permissions import AllowAny, IsAdminUser
-from .models import CustomUser
-from .serializers import RegisterSerializer, AdminApprovalSerializer, UserProfileSerializer, LoginSerializer
-from .token import get_tokens_for_user
+
 
 # ---------------- Register Admin Request ----------------
 # class RegisterView(APIView):
