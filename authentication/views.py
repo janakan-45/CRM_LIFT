@@ -23,11 +23,6 @@ from rest_framework.permissions import BasePermission
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from rest_framework.parsers import MultiPartParser, FormParser
 
-from rest_framework.permissions import AllowAny, IsAdminUser
-from .models import CustomUser
-from .serializers import RegisterSerializer, AdminApprovalSerializer, UserProfileSerializer, LoginSerializer
-from .token import get_tokens_for_user
-
 
 class IsOwner(BasePermission):
     def has_permission(self, request, view):
@@ -1453,6 +1448,10 @@ def export_items_to_excel(request):
 #         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 
+from rest_framework.decorators import api_view, permission_classes
+import csv
+import io
+import openpyxl
 
 
 @api_view(['POST'])
@@ -1521,7 +1520,6 @@ def import_items_csv(request):
 
 
 ####################################complaints########################################
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_employee(request):
@@ -1855,7 +1853,10 @@ def print_complaint(request, pk):
 
     
 # accounts/views.py
-
+from rest_framework.permissions import AllowAny, IsAdminUser
+from .models import CustomUser
+from .serializers import RegisterSerializer, AdminApprovalSerializer, UserProfileSerializer, LoginSerializer
+from .token import get_tokens_for_user
 
 # ---------------- Register Admin Request ----------------
 # class RegisterView(APIView):
