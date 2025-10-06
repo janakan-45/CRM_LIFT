@@ -1009,6 +1009,58 @@ def lift_list(request):
     return Response(serializer.data)
 
 
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def export_lifts_to_excel(request):
+#     wb = Workbook()
+#     ws = wb.active
+#     ws.title = "Lifts"
+
+#     headers = [
+#         'Lift Code', 'Name', 'Price', 'Model', 'No of Passengers', 'Load (kg)', 'Speed',
+#         'Floor ID', 'Brand', 'Lift Type', 'Machine Type', 'Machine Brand',
+#         'Door Type', 'Door Brand', 'Controller Brand', 'Cabin'
+#     ]
+
+#     for col_num, header in enumerate(headers, 1):
+#         ws[f"{get_column_letter(col_num)}1"] = header
+
+#     lifts = Lift.objects.all()
+
+#     for row_num, lift in enumerate(lifts, 2):
+#         ws[f"{get_column_letter(1)}{row_num}"] = lift.lift_code
+#         ws[f"{get_column_letter(2)}{row_num}"] = lift.name
+#         ws[f"{get_column_letter(3)}{row_num}"] = float(lift.price)
+#         ws[f"{get_column_letter(4)}{row_num}"] = lift.model
+#         ws[f"{get_column_letter(5)}{row_num}"] = lift.no_of_passengers
+#         ws[f"{get_column_letter(6)}{row_num}"] = lift.load_kg
+#         ws[f"{get_column_letter(7)}{row_num}"] = lift.speed
+#         ws[f"{get_column_letter(8)}{row_num}"] = lift.floor_id.value if lift.floor_id else ''
+#         ws[f"{get_column_letter(9)}{row_num}"] = lift.brand.value if lift.brand else ''
+#         ws[f"{get_column_letter(10)}{row_num}"] = lift.lift_type.value if lift.lift_type else ''
+#         ws[f"{get_column_letter(11)}{row_num}"] = lift.machine_type.value if lift.machine_type else ''
+#         ws[f"{get_column_letter(12)}{row_num}"] = lift.machine_brand.value if lift.machine_brand else ''
+#         ws[f"{get_column_letter(13)}{row_num}"] = lift.door_type.value if lift.door_type else ''
+#         ws[f"{get_column_letter(14)}{row_num}"] = lift.door_brand.value if lift.door_brand else ''
+#         ws[f"{get_column_letter(15)}{row_num}"] = lift.controller_brand.value if lift.controller_brand else ''
+#         ws[f"{get_column_letter(16)}{row_num}"] = lift.cabin.value if lift.cabin else ''
+
+#     output = BytesIO()
+#     wb.save(output)
+#     output.seek(0)
+
+#     response = HttpResponse(
+#         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+#     )
+#     response['Content-Disposition'] = 'attachment; filename=lifts_export.xlsx'
+#     response.write(output.read())
+
+#     return response
+
+
+# Updated views.py snippet for export_lifts_to_excel
+# Add the new fields to the headers and data export in export_lifts_to_excel
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def export_lifts_to_excel(request):
@@ -1017,9 +1069,12 @@ def export_lifts_to_excel(request):
     ws.title = "Lifts"
 
     headers = [
-        'Lift Code', 'Name', 'Price', 'Model', 'No of Passengers', 'Load (kg)', 'Speed',
-        'Floor ID', 'Brand', 'Lift Type', 'Machine Type', 'Machine Brand',
-        'Door Type', 'Door Brand', 'Controller Brand', 'Cabin'
+        'Lift Code', 'Name', 'Price', 'Floor ID', 'Brand', 'Model',
+        'No of Passengers', 'Load (kg)', 'Speed', 'Lift Type',
+        'Machine Type', 'Machine Brand', 'Door Type', 'Door Brand',
+        'Controller Brand', 'Cabin',
+        # New fields added
+        'Block', 'License No', 'License Start Date', 'License End Date'
     ]
 
     for col_num, header in enumerate(headers, 1):
@@ -1030,13 +1085,13 @@ def export_lifts_to_excel(request):
     for row_num, lift in enumerate(lifts, 2):
         ws[f"{get_column_letter(1)}{row_num}"] = lift.lift_code
         ws[f"{get_column_letter(2)}{row_num}"] = lift.name
-        ws[f"{get_column_letter(3)}{row_num}"] = float(lift.price)
-        ws[f"{get_column_letter(4)}{row_num}"] = lift.model
-        ws[f"{get_column_letter(5)}{row_num}"] = lift.no_of_passengers
-        ws[f"{get_column_letter(6)}{row_num}"] = lift.load_kg
-        ws[f"{get_column_letter(7)}{row_num}"] = lift.speed
-        ws[f"{get_column_letter(8)}{row_num}"] = lift.floor_id.value if lift.floor_id else ''
-        ws[f"{get_column_letter(9)}{row_num}"] = lift.brand.value if lift.brand else ''
+        ws[f"{get_column_letter(3)}{row_num}"] = str(lift.price)
+        ws[f"{get_column_letter(4)}{row_num}"] = lift.floor_id.value if lift.floor_id else ''
+        ws[f"{get_column_letter(5)}{row_num}"] = lift.brand.value if lift.brand else ''
+        ws[f"{get_column_letter(6)}{row_num}"] = lift.model
+        ws[f"{get_column_letter(7)}{row_num}"] = lift.no_of_passengers
+        ws[f"{get_column_letter(8)}{row_num}"] = lift.load_kg
+        ws[f"{get_column_letter(9)}{row_num}"] = lift.speed
         ws[f"{get_column_letter(10)}{row_num}"] = lift.lift_type.value if lift.lift_type else ''
         ws[f"{get_column_letter(11)}{row_num}"] = lift.machine_type.value if lift.machine_type else ''
         ws[f"{get_column_letter(12)}{row_num}"] = lift.machine_brand.value if lift.machine_brand else ''
@@ -1044,6 +1099,11 @@ def export_lifts_to_excel(request):
         ws[f"{get_column_letter(14)}{row_num}"] = lift.door_brand.value if lift.door_brand else ''
         ws[f"{get_column_letter(15)}{row_num}"] = lift.controller_brand.value if lift.controller_brand else ''
         ws[f"{get_column_letter(16)}{row_num}"] = lift.cabin.value if lift.cabin else ''
+        # New fields added
+        ws[f"{get_column_letter(17)}{row_num}"] = lift.block or ''
+        ws[f"{get_column_letter(18)}{row_num}"] = lift.license_no or ''
+        ws[f"{get_column_letter(19)}{row_num}"] = lift.license_start_date.strftime('%Y-%m-%d') if lift.license_start_date else ''
+        ws[f"{get_column_letter(20)}{row_num}"] = lift.license_end_date.strftime('%Y-%m-%d') if lift.license_end_date else ''
 
     output = BytesIO()
     wb.save(output)
@@ -1056,7 +1116,6 @@ def export_lifts_to_excel(request):
     response.write(output.read())
 
     return response
-
 import csv
 import io
 

@@ -175,6 +175,10 @@ class Lift(models.Model):
     door_brand = models.ForeignKey(DoorBrand, on_delete=models.SET_NULL, null=True)
     controller_brand = models.ForeignKey(ControllerBrand, on_delete=models.SET_NULL, null=True)
     cabin = models.ForeignKey(Cabin, on_delete=models.SET_NULL, null=True)
+    block = models.CharField(max_length=50, blank=True, null=True)  # e.g., building block or wing
+    license_no = models.CharField(max_length=50, unique=True, blank=True, null=True)  # License number, unique
+    license_start_date = models.DateField(blank=True, null=True)  # License start date
+    license_end_date = models.DateField(blank=True, null=True)  # License end date
 
     def __str__(self):
         return self.lift_code

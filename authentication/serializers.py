@@ -205,7 +205,9 @@ class LiftSerializer(serializers.ModelSerializer):
             'controller_brand_value', 'cabin_value',
             # Include write-only fields for POST/PUT
             'floor_id', 'brand', 'lift_type', 'machine_type', 'machine_brand',
-            'door_type', 'door_brand', 'controller_brand', 'cabin'
+            'door_type', 'door_brand', 'controller_brand', 'cabin',
+            
+            'block', 'license_no', 'license_start_date', 'license_end_date'
         ]
 
     def validate_lift_code(self, value):
