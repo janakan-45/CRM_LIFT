@@ -12,6 +12,7 @@ from .serializers import RequisitionSerializer
 from rest_framework.permissions import BasePermission
 
 
+
 ############################ Requisition ######################################
 
 class IsOwner(BasePermission):
@@ -73,13 +74,7 @@ def requisition_list(request):
     requisitions = Requisition.objects.all()
     serializer = RequisitionSerializer(requisitions, many=True)
     return Response(serializer.data)
-from io import BytesIO
-from openpyxl import Workbook
-from openpyxl.utils import get_column_letter
-from django.http import HttpResponse
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from .models import Requisition  # adjust import if needed
+
 
 
 @api_view(['GET'])
