@@ -137,7 +137,7 @@ CORS_ORIGIN_ALLOW_ALL = True  # Consider restricting in production
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "https://ess-backend-fg6m.onrender.com",
-    "https://atom-lift.vercel.app/",
+    "https://atom-lift.vercel.app",
     
 ]
 CORS_ALLOW_METHODS = [
@@ -151,7 +151,7 @@ CORS_ALLOW_METHODS = [
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "https://ess-backend-fg6m.onrender.com",
-    "https://atom-lift.vercel.app/"
+    "https://atom-lift.vercel.app"
     
 ]
 CORS_ALLOW_HEADERS = [
