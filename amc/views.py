@@ -1,4 +1,4 @@
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, parser_classes
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -12,6 +12,8 @@ from django.http import HttpResponse
 from io import BytesIO
 from django.utils import timezone
 from rest_framework.permissions import BasePermission
+from rest_framework.parsers import MultiPartParser, FormParser
+from datetime import datetime
 
 ###################################amc views######################################
 
@@ -271,61 +273,191 @@ import io
 import openpyxl
 
 
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def import_amc_csv(request):
+#     if 'file' not in request.FILES:
+#         return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+
+#     uploaded_file = request.FILES['file']
+#     file_name = uploaded_file.name.lower()
+    
+#     if not (file_name.endswith('.csv') or file_name.endswith('.xlsx')):
+#         return Response({"error": "File must be CSV or Excel (.xlsx)"}, status=status.HTTP_400_BAD_REQUEST)
+
+#     try:
+#         if file_name.endswith('.csv'):
+#             decoded_file = uploaded_file.read().decode('utf-8')
+#             io_string = io.StringIO(decoded_file)
+#             reader = csv.reader(io_string, delimiter=',')
+#             next(reader)  # Skip header row
+#             rows = reader
+#         else:  # Excel file
+#             workbook = openpyxl.load_workbook(uploaded_file)
+#             worksheet = workbook.active
+#             rows = worksheet.iter_rows(min_row=2, values_only=True)  # Skip header row
+
+#         for row in rows:
+#             if not row or all(cell is None or cell == '' for cell in row):  # Skip blank rows
+#                 continue
+                
+#             if file_name.endswith('.csv') and any(',' in str(field) for field in row if field):  # Check for commas in CSV data
+#                 return Response({"error": "CSV contains commas in data"}, status=status.HTTP_400_BAD_REQUEST)
+
+#             # Map columns to AMC model fields
+#             amc_data = {
+#                 'customer': CustomerSerializer().get_or_create_customer(row[0])[0],  # Custom method to get or create customer
+#                 'invoice_frequency': row[1] if row[1] in ['annually', 'semi_annually', 'quarterly', 'monthly', 'per_service'] else 'annually',
+#                 'amc_type': AMCType.objects.get_or_create(name=row[2])[0],
+#                 'payment_terms': PaymentTerms.objects.get_or_create(name=row[3])[0],
+#                 'start_date': timezone.datetime.strptime(str(row[4]), '%Y-%m-%d').date() if row[4] else None,
+#                 'end_date': timezone.datetime.strptime(str(row[5]), '%Y-%m-%d').date() if row[5] else None,
+#                 'equipment_no': str(row[6]) if row[6] else '',
+#                 'notes': str(row[7]) if row[7] else '',
+#                 'is_generate_contract': str(row[8]).lower() == 'true' if row[8] else False,
+#                 'no_of_services': int(row[9]) if row[9] else 12,
+#                 'price': float(row[10]) if row[10] else 0.00,
+#                 'no_of_lifts': int(row[11]) if row[11] else 0,
+#                 'gst_percentage': float(row[12]) if row[12] else 0.00,
+#                 'amc_service_item': Item.objects.get_or_create(name=row[13])[0] if row[13] else None,
+#             }
+#             serializer = AMCSerializer(data=amc_data)
+#             if serializer.is_valid():
+#                 serializer.save()
+#             else:
+#                 return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+#         return Response({"message": "AMC details imported successfully!"}, status=status.HTTP_201_CREATED)
+
+#     except Exception as e:
+#         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@parser_classes([MultiPartParser, FormParser])
 def import_amc_csv(request):
+    """
+    Import AMC data from CSV or Excel (.xlsx)
+    Expected column order:
+    customer_id, invoice_frequency, amc_type, payment_terms, start_date,
+    end_date, equipment_no, notes, is_generate_contract, no_of_services,
+    price, no_of_lifts, gst_percentage, amc_service_item
+    """
     if 'file' not in request.FILES:
         return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
 
     uploaded_file = request.FILES['file']
     file_name = uploaded_file.name.lower()
-    
+
     if not (file_name.endswith('.csv') or file_name.endswith('.xlsx')):
         return Response({"error": "File must be CSV or Excel (.xlsx)"}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
+        # --- Read rows ---
         if file_name.endswith('.csv'):
-            decoded_file = uploaded_file.read().decode('utf-8')
+            decoded_file = uploaded_file.read().decode('utf-8-sig')
             io_string = io.StringIO(decoded_file)
-            reader = csv.reader(io_string, delimiter=',')
-            next(reader)  # Skip header row
-            rows = reader
-        else:  # Excel file
+            reader = csv.reader(io_string)
+            next(reader, None)  # Skip header row
+            rows = list(reader)
+        else:
             workbook = openpyxl.load_workbook(uploaded_file)
             worksheet = workbook.active
-            rows = worksheet.iter_rows(min_row=2, values_only=True)  # Skip header row
+            rows = list(worksheet.iter_rows(min_row=2, values_only=True))  # Skip header row
+
+        created_count = 0
+        skipped_count = 0
+
+        # --- Helper functions ---
+        def to_str(v): return str(v).strip() if v else ''
+        def to_int(v):
+            try:
+                return int(float(v))
+            except:
+                return 0
+        def to_float(v):
+            try:
+                return float(v)
+            except:
+                return 0.0
+        def parse_date(v):
+            if not v:
+                return None
+            if isinstance(v, datetime):
+                return v.date()
+            for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"):
+                try:
+                    return datetime.strptime(str(v), fmt).date()
+                except Exception:
+                    continue
+            return None
 
         for row in rows:
-            if not row or all(cell is None or cell == '' for cell in row):  # Skip blank rows
+            if not row or all(cell in [None, ''] for cell in row):
+                skipped_count += 1
                 continue
-                
-            if file_name.endswith('.csv') and any(',' in str(field) for field in row if field):  # Check for commas in CSV data
-                return Response({"error": "CSV contains commas in data"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Map columns to AMC model fields
-            amc_data = {
-                'customer': CustomerSerializer().get_or_create_customer(row[0])[0],  # Custom method to get or create customer
-                'invoice_frequency': row[1] if row[1] in ['annually', 'semi_annually', 'quarterly', 'monthly', 'per_service'] else 'annually',
-                'amc_type': AMCType.objects.get_or_create(name=row[2])[0],
-                'payment_terms': PaymentTerms.objects.get_or_create(name=row[3])[0],
-                'start_date': timezone.datetime.strptime(str(row[4]), '%Y-%m-%d').date() if row[4] else None,
-                'end_date': timezone.datetime.strptime(str(row[5]), '%Y-%m-%d').date() if row[5] else None,
-                'equipment_no': str(row[6]) if row[6] else '',
-                'notes': str(row[7]) if row[7] else '',
-                'is_generate_contract': str(row[8]).lower() == 'true' if row[8] else False,
-                'no_of_services': int(row[9]) if row[9] else 12,
-                'price': float(row[10]) if row[10] else 0.00,
-                'no_of_lifts': int(row[11]) if row[11] else 0,
-                'gst_percentage': float(row[12]) if row[12] else 0.00,
-                'amc_service_item': Item.objects.get_or_create(name=row[13])[0] if row[13] else None,
-            }
-            serializer = AMCSerializer(data=amc_data)
-            if serializer.is_valid():
-                serializer.save()
-            else:
-                return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                # --- Fetch or create related objects ---
+                invoice_freq = to_str(row[1]).lower()
+                if invoice_freq not in ['annually', 'semi_annually', 'quarterly', 'monthly', 'per_service']:
+                    invoice_freq = 'annually'
 
-        return Response({"message": "AMC details imported successfully!"}, status=status.HTTP_201_CREATED)
+                amc_type_obj = AMCType.objects.get_or_create(name=to_str(row[2]))[0] if row[2] else None
+                payment_terms_obj = PaymentTerms.objects.get_or_create(name=to_str(row[3]))[0] if row[3] else None
+                item_obj = Item.objects.get_or_create(name=to_str(row[13]))[0] if len(row) > 13 and row[13] else None
+
+                # --- Try getting customer by ID or name ---
+                customer_ref = to_str(row[0])
+                customer = None
+                if customer_ref.isdigit():
+                    from sales.models import Customer
+                    customer = Customer.objects.filter(id=int(customer_ref)).first()
+                if not customer:
+                    customer = Customer.objects.filter(site_name__iexact=customer_ref).first()
+                if not customer:
+                    skipped_count += 1
+                    continue
+
+                # --- Build AMC data ---
+                amc_data = {
+                    'customer': customer.id,
+                    'invoice_frequency': invoice_freq,
+                    'amc_type': amc_type_obj.id if amc_type_obj else None,
+                    'payment_terms': payment_terms_obj.id if payment_terms_obj else None,
+                    'start_date': parse_date(row[4]),
+                    'end_date': parse_date(row[5]),
+                    'equipment_no': to_str(row[6]),
+                    'notes': to_str(row[7]),
+                    'is_generate_contract': str(row[8]).lower() == 'true' if row[8] else False,
+                    'no_of_services': to_int(row[9]) if len(row) > 9 else 12,
+                    'price': to_float(row[10]),
+                    'no_of_lifts': to_int(row[11]),
+                    'gst_percentage': to_float(row[12]),
+                    'amc_service_item': item_obj.id if item_obj else None,
+                }
+
+                serializer = AMCSerializer(data=amc_data)
+                if serializer.is_valid():
+                    serializer.save()
+                    created_count += 1
+                else:
+                    return Response({"error": serializer.errors, "row": row}, status=status.HTTP_400_BAD_REQUEST)
+
+            except Exception as row_error:
+                print(f"Error importing row: {row_error}")
+                skipped_count += 1
+                continue
+
+        return Response(
+            {
+                "message": f"AMC import completed. {created_count} added, {skipped_count} skipped.",
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
