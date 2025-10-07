@@ -323,6 +323,7 @@ from django.utils import timezone
 
 
 import openpyxl
+from datetime import datetime
 
 
 @api_view(['POST'])
@@ -333,76 +334,105 @@ def import_customers_csv(request):
 
     uploaded_file = request.FILES['file']
     file_name = uploaded_file.name.lower()
-    
+
     if not (file_name.endswith('.csv') or file_name.endswith('.xlsx')):
         return Response({"error": "File must be CSV or Excel (.xlsx)"}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
+        # --- Read File ---
         if file_name.endswith('.csv'):
-            decoded_file = uploaded_file.read().decode('utf-8')
+            decoded_file = uploaded_file.read().decode('utf-8-sig')
             io_string = io.StringIO(decoded_file)
-            reader = csv.reader(io_string, delimiter=',')
-            next(reader)  # Skip header row
-            rows = reader
-        else:  # Excel file
+            reader = csv.reader(io_string)
+            next(reader, None)
+            rows = list(reader)
+        else:
             workbook = openpyxl.load_workbook(uploaded_file)
             worksheet = workbook.active
-            rows = worksheet.iter_rows(min_row=2, values_only=True)  # Skip header row
+            rows = list(worksheet.iter_rows(min_row=2, values_only=True))
+
+        created_count = 0
+        skipped_count = 0
+
+        # --- Helper functions ---
+        def to_str(v): return str(v).strip() if v else ''
+        def to_int(v):
+            try: return int(float(v))
+            except: return 0
+        def parse_date(v):
+            if not v: return None
+            if isinstance(v, datetime): return v.date()
+            for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"):
+                try: return datetime.strptime(str(v), fmt).date()
+                except: continue
+            return None
 
         for row in rows:
-            if not row or all(cell is None or cell == '' for cell in row):  # Skip blank rows
+            if not row or all(cell in [None, ''] for cell in row):
+                skipped_count += 1
                 continue
-                
-            if file_name.endswith('.csv') and any(',' in str(field) for field in row if field):  # Check for commas in CSV data
-                return Response({"error": "CSV contains commas in data"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Map columns to Customer model fields
-            # Assuming order: site_id, job_no, site_name, site_address, email, phone, office_address,
-            # contact_person_name, designation, pin_code, country, province_state_value, city, sector,
-            # routes_value, branch_value, handover_date, billing_name, pan_number, gst_number,
-            # active_mobile, expired_mobile, contracts, no_of_lifts, completed_services, due_services,
-            # overdue_services, tickets, uploads_files
-            customer_data = {
-                'site_id': str(row[0]) if row[0] else '',
-                'job_no': str(row[1]) if row[1] else '',
-                'site_name': str(row[2]) if row[2] else '',
-                'site_address': str(row[3]) if row[3] else '',
-                'email': str(row[4]) if row[4] else '',
-                'phone': str(row[5]) if row[5] else '',
-                'office_address': str(row[6]) if row[6] else '',
-                'contact_person_name': str(row[7]) if row[7] else '',
-                'designation': str(row[8]) if row[8] else '',
-                'pin_code': str(row[9]) if row[9] else '',
-                'country': str(row[10]) if row[10] else '',
-                'province_state': ProvinceState.objects.get_or_create(value=str(row[11]))[0] if row[11] else None,
-                'city': str(row[12]) if row[12] else '',
-                'sector': str(row[13]) if row[13] in ['government', 'private'] else 'private',
-                'routes': Route.objects.get_or_create(value=str(row[14]))[0] if row[14] else None,
-                'branch': Branch.objects.get_or_create(value=str(row[15]))[0] if row[15] else None,
-                'handover_date': timezone.datetime.strptime(str(row[16]), '%Y-%m-%d').date() if row[16] else None,
-                'billing_name': str(row[17]) if row[17] else '',
-                'pan_number': str(row[18]) if row[18] else '',
-                'gst_number': str(row[19]) if row[19] else '',
-                'active_mobile': int(row[20]) if row[20] else 0,
-                'expired_mobile': int(row[21]) if row[21] else 0,
-                'contracts': int(row[22]) if row[22] else 0,
-                'no_of_lifts': int(row[23]) if row[23] else 0,
-                'completed_services': int(row[24]) if row[24] else 0,
-                'due_services': int(row[25]) if row[25] else 0,
-                'overdue_services': int(row[26]) if row[26] else 0,
-                'tickets': int(row[27]) if row[27] else 0,
-                'uploads_files': str(row[28]) if row[28] else None,
-            }
-            serializer = CustomerSerializer(data=customer_data)
-            if serializer.is_valid():
-                serializer.save()
-            else:
-                return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                # --- Related objects ---
+                province_state_obj = ProvinceState.objects.get_or_create(value=to_str(row[11]))[0] if len(row) > 11 and row[11] else None
+                route_obj = Route.objects.get_or_create(value=to_str(row[14]))[0] if len(row) > 14 and row[14] else None
+                branch_obj = Branch.objects.get_or_create(value=to_str(row[15]))[0] if len(row) > 15 and row[15] else None
 
-        return Response({"message": "Customers imported successfully!"}, status=status.HTTP_201_CREATED)
+                # --- Map fields ---
+                customer_data = {
+                    'site_id': to_str(row[0]),
+                    'job_no': to_str(row[1]),
+                    'site_name': to_str(row[2]),
+                    'site_address': to_str(row[3]),
+                    'email': to_str(row[4]),
+                    'phone': to_str(row[5]),
+                    'office_address': to_str(row[6]),
+                    'contact_person_name': to_str(row[7]),
+                    'designation': to_str(row[8]),
+                    'pin_code': to_str(row[9]),
+                    'country': to_str(row[10]),
+                    'province_state': province_state_obj.id if province_state_obj else None,
+                    'city': to_str(row[12]),
+                    'sector': to_str(row[13]).lower() if to_str(row[13]).lower() in ['government', 'private'] else 'private',
+                    'routes': route_obj.id if route_obj else None,
+                    'branch': branch_obj.id if branch_obj else None,
+                    'handover_date': parse_date(row[16]) if len(row) > 16 else None,
+                    'billing_name': to_str(row[17]) if len(row) > 17 else '',
+                    'pan_number': to_str(row[18]) if len(row) > 18 else '',
+                    'gst_number': to_str(row[19]) if len(row) > 19 else '',
+                    'active_mobile': to_int(row[20]) if len(row) > 20 else 0,
+                    'expired_mobile': to_int(row[21]) if len(row) > 21 else 0,
+                    'contracts': to_int(row[22]) if len(row) > 22 else 0,
+                    'no_of_lifts': to_int(row[23]) if len(row) > 23 else 0,
+                    'completed_services': to_int(row[24]) if len(row) > 24 else 0,
+                    'due_services': to_int(row[25]) if len(row) > 25 else 0,
+                    'overdue_services': to_int(row[26]) if len(row) > 26 else 0,
+                    'tickets': to_int(row[27]) if len(row) > 27 else 0,
+                    'uploads_files': to_str(row[28]) if len(row) > 28 else None,
+                }
+
+                serializer = CustomerSerializer(data=customer_data)
+                if serializer.is_valid():
+                    serializer.save()
+                    created_count += 1
+                else:
+                    return Response({
+                        "error": serializer.errors,
+                        "row": row
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+            except Exception as row_error:
+                print(f"Error importing row: {row_error}")
+                skipped_count += 1
+                continue
+
+        return Response({
+            "message": f"Customers imported successfully! {created_count} added, {skipped_count} skipped."
+        }, status=status.HTTP_201_CREATED)
 
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 ###########################################quotation###################################3
 
 
