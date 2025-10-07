@@ -1622,66 +1622,103 @@ def export_items_to_excel(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@parser_classes([MultiPartParser, FormParser])
 def import_items_csv(request):
+    """
+    Import Item records from CSV or Excel (.xlsx)
+    Expected column order:
+    item_number, name, make_value, model, type_value, capacity,
+    threshold_qty, sale_price, service_type, tax_preference, unit_value,
+    sac_code, igst, gst, description
+    """
     if 'file' not in request.FILES:
         return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
 
     uploaded_file = request.FILES['file']
     file_name = uploaded_file.name.lower()
-    
+
     if not (file_name.endswith('.csv') or file_name.endswith('.xlsx')):
         return Response({"error": "File must be CSV or Excel (.xlsx)"}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
+        # --- Read rows from file ---
+        rows = []
         if file_name.endswith('.csv'):
-            decoded_file = uploaded_file.read().decode('utf-8')
+            decoded_file = uploaded_file.read().decode('utf-8-sig')
             io_string = io.StringIO(decoded_file)
-            reader = csv.reader(io_string, delimiter=',')
-            next(reader)  # Skip header row
-            rows = reader
-        else:  # Excel file
+            reader = csv.reader(io_string)
+            next(reader, None)  # Skip header
+            rows = list(reader)
+        else:
             workbook = openpyxl.load_workbook(uploaded_file)
             worksheet = workbook.active
-            rows = worksheet.iter_rows(min_row=2, values_only=True)  # Skip header row
+            rows = list(worksheet.iter_rows(min_row=2, values_only=True))
+
+        created_count = 0
+        skipped_count = 0
 
         for row in rows:
-            if not row or all(cell is None or cell == '' for cell in row):  # Skip blank rows
+            # Skip completely empty rows
+            if not row or all(cell in (None, '') for cell in row):
+                skipped_count += 1
                 continue
-                
-            if file_name.endswith('.csv') and any(',' in str(field) or not str(field).isalnum() for field in row if field):  # Check for commas or special characters in CSV
-                return Response({"error": "CSV contains commas or special characters"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Map columns to Item model fields
-            # Assuming order: item_number, name, make_value, model, type_value, capacity,
-            # threshold_qty, sale_price, service_type, tax_preference, unit_value,
-            # sac_code, igst, gst, description
-            item_data = {
-                'item_number': str(row[0]) if row[0] else '',
-                'name': str(row[1]) if row[1] else '',
-                'make': Make.objects.get_or_create(value=str(row[2]))[0] if row[2] else None,
-                'model': str(row[3]) if row[3] else '',
-                'type': Type.objects.get_or_create(value=str(row[4]))[0] if row[4] else None,
-                'capacity': str(row[5]) if row[5] else '',
-                'threshold_qty': int(row[6]) if row[6] else 0,
-                'sale_price': float(row[7]) if row[7] else 0.00,
-                'service_type': str(row[8]) if row[8] in ['Services', 'Goods'] else 'Goods',
-                'tax_preference': str(row[9]) if row[9] in ['Non-Taxable', 'Taxable'] else 'Non-Taxable',
-                'unit': Unit.objects.get_or_create(value=str(row[10]))[0] if row[10] else None,
-                'sac_code': str(row[11]) if row[11] else None,
-                'igst': float(row[12]) if row[12] else None,
-                'gst': float(row[13]) if row[13] else None,
-                'description': str(row[14]) if row[14] else None,
-            }
-            serializer = ItemSerializer(data=item_data)
-            if serializer.is_valid():
-                serializer.save()
-            else:
-                return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                # --- Safe helpers ---
+                def to_str(v): return str(v).strip() if v else ''
+                def to_int(v): 
+                    try:
+                        return int(float(v)) if v not in (None, '') else 0
+                    except:
+                        return 0
+                def to_float(v):
+                    try:
+                        return float(v) if v not in (None, '') else 0.0
+                    except:
+                        return 0.0
 
-        return Response({"message": "Items imported successfully!"}, status=status.HTTP_201_CREATED)
+                # --- Map columns to Item model fields ---
+                item_data = {
+                    'item_number': to_str(row[0]),
+                    'name': to_str(row[1]),
+                    'make': Make.objects.get_or_create(value=to_str(row[2]))[0].id if row[2] else None,
+                    'model': to_str(row[3]),
+                    'type': Type.objects.get_or_create(value=to_str(row[4]))[0].id if row[4] else None,
+                    'capacity': to_str(row[5]),
+                    'threshold_qty': to_int(row[6]),
+                    'sale_price': to_float(row[7]),
+                    'service_type': to_str(row[8]) if to_str(row[8]) in ['Services', 'Goods'] else 'Goods',
+                    'tax_preference': to_str(row[9]) if to_str(row[9]) in ['Non-Taxable', 'Taxable'] else 'Non-Taxable',
+                    'unit': Unit.objects.get_or_create(value=to_str(row[10]))[0].id if row[10] else None,
+                    'sac_code': to_str(row[11]) if len(row) > 11 else '',
+                    'igst': to_float(row[12]) if len(row) > 12 else 0.0,
+                    'gst': to_float(row[13]) if len(row) > 13 else 0.0,
+                    'description': to_str(row[14]) if len(row) > 14 else '',
+                }
+
+                serializer = ItemSerializer(data=item_data)
+                if serializer.is_valid():
+                    serializer.save()
+                    created_count += 1
+                else:
+                    return Response(
+                        {"error": serializer.errors, "row": row},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+            except Exception as row_error:
+                print(f"Row skipped due to error: {row_error}")
+                skipped_count += 1
+                continue
+
+        return Response(
+            {"message": f"Import complete. {created_count} items added, {skipped_count} skipped."},
+            status=status.HTTP_201_CREATED
+        )
 
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 ####################################complaints########################################
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
