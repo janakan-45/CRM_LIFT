@@ -46,13 +46,14 @@ class AMCSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
      today = timezone.now().date()
+     is_renewal = self.context.get('is_renewal', False)
 
     # Rule 1: Start date must be today or later
      if 'start_date' in data and data['start_date']:
-        if data['start_date'] < today:
-            raise serializers.ValidationError({
-                "start_date": f"Start date cannot be before {today}."
-            })
+            if data['start_date'] < today and not is_renewal:
+                raise serializers.ValidationError({
+                    "start_date": f"Start date cannot be before {today} unless renewing an expired AMC."
+                })
 
     # Rule 2: End date must be after start date
      if data.get('end_date') and data.get('start_date'):

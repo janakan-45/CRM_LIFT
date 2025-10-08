@@ -150,6 +150,31 @@ def update_amc(request, pk):
         }, status=status.HTTP_200_OK)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def renew_amc(request, pk):
+    try:
+        amc = AMC.objects.get(pk=pk)
+    except AMC.DoesNotExist:
+        return Response({"error": "AMC not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    today = timezone.now().date()
+    if amc.end_date >= today:
+        return Response({"error": "AMC is not expired, cannot renew yet."}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = AMCSerializer(amc, data=request.data, partial=True, context={'is_renewal': True})
+    if serializer.is_valid():
+        renewed_amc = serializer.save()
+        renewed_amc.total_amount_paid = 0.00
+        renewed_amc.amount_due = renewed_amc.contract_amount
+        renewed_amc.save()
+        return Response({
+            "message": "AMC renewed successfully!",
+            "reference_id": renewed_amc.reference_id,
+            "customer_id": renewed_amc.customer.id
+        }, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_amc(request, pk):

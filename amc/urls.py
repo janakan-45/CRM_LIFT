@@ -19,5 +19,6 @@ urlpatterns = [
     path('amc-list/', views.amc_list, name='amc_list'),
     path('export-amc-excel/', views.export_amc_to_excel, name='export_amc_to_excel'),
     path('import-amc-csv/', views.import_amc_csv, name='import_amc_csv'),
+    path('amc-renew/<int:pk>/', views.renew_amc, name='renew_amc'),
 
 ]
