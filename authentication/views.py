@@ -1869,91 +1869,102 @@ def delete_complaint(request, pk):
     except Complaint.DoesNotExist:
         return Response({"error": "Complaint not found"}, status=status.HTTP_404_NOT_FOUND)
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def export_complaints_to_excel(request):
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Complaints"
-
-    headers = [
-        'Reference', 'Type', 'Date', 'Customer Name', 'Contact Person Name',
-        'Contact Person Mobile', 'Block/Wing', 'Assigned To', 'Priority',
-        'Subject', 'Message'
-    ]
-
-    for col_num, header in enumerate(headers, 1):
-        ws[f"{get_column_letter(col_num)}1"] = header
-
-    complaints = Complaint.objects.all()
-
-    for row_num, complaint in enumerate(complaints, 2):
-        ws[f"{get_column_letter(1)}{row_num}"] = complaint.reference
-        ws[f"{get_column_letter(2)}{row_num}"] = complaint.type
-        ws[f"{get_column_letter(3)}{row_num}"] = complaint.date.strftime('%Y-%m-%d %H:%M:%S')
-        ws[f"{get_column_letter(4)}{row_num}"] = complaint.customer.site_name if complaint.customer else ''
-        ws[f"{get_column_letter(5)}{row_num}"] = complaint.contact_person_name
-        ws[f"{get_column_letter(6)}{row_num}"] = complaint.contact_person_mobile
-        ws[f"{get_column_letter(7)}{row_num}"] = complaint.block_wing
-        ws[f"{get_column_letter(8)}{row_num}"] = complaint.assign_to.name if complaint.assign_to else ''
-        ws[f"{get_column_letter(9)}{row_num}"] = complaint.priority
-        ws[f"{get_column_letter(10)}{row_num}"] = complaint.subject
-        ws[f"{get_column_letter(11)}{row_num}"] = complaint.message
-
-    output = BytesIO()
-    wb.save(output)
-    output.seek(0)
-
-    response = HttpResponse(
-        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
-    response['Content-Disposition'] = 'attachment; filename=complaints_export.xlsx'
-    response.write(output.read())
-
-    return response
-
-
+from io import BytesIO
+from openpyxl import Workbook
+from openpyxl.utils import get_column_letter
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 import logging
-from io import BytesIO
+from django.http import HttpResponse
 
 logger = logging.getLogger(__name__)
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def export_complaints_to_excel(request):
+    try:
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Complaints"
+
+        headers = [
+            'Reference', 'Type', 'Date', 'Customer Name', 'Contact Person Name',
+            'Contact Person Mobile', 'Block/Wing', 'Assigned To', 'Priority',
+            'Subject', 'Message'
+        ]
+
+        for col_num, header in enumerate(headers, 1):
+            ws[f"{get_column_letter(col_num)}1"] = header
+
+        complaints = Complaint.objects.all().select_related('customer', 'assign_to')  # Optimize with select_related
+
+        for row_num, complaint in enumerate(complaints, 2):
+            ws[f"{get_column_letter(1)}{row_num}"] = complaint.reference or ''
+            ws[f"{get_column_letter(2)}{row_num}"] = complaint.type or ''
+            ws[f"{get_column_letter(3)}{row_num}"] = complaint.date.strftime('%Y-%m-%d %H:%M:%S') if complaint.date else ''
+            ws[f"{get_column_letter(4)}{row_num}"] = getattr(complaint.customer, 'site_name', '') if complaint.customer else ''
+            ws[f"{get_column_letter(5)}{row_num}"] = complaint.contact_person_name or ''
+            ws[f"{get_column_letter(6)}{row_num}"] = complaint.contact_person_mobile or ''
+            ws[f"{get_column_letter(7)}{row_num}"] = complaint.block_wing or ''
+            ws[f"{get_column_letter(8)}{row_num}"] = getattr(complaint.assign_to, 'username', 'Unassigned') if complaint.assign_to else 'Unassigned'
+            ws[f"{get_column_letter(9)}{row_num}"] = complaint.priority or ''
+            ws[f"{get_column_letter(10)}{row_num}"] = complaint.subject or ''
+            ws[f"{get_column_letter(11)}{row_num}"] = complaint.message or ''
+
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename=complaints_export.xlsx'
+        response.write(output.getvalue())
+        output.close()
+
+        return response
+
+    except Exception as e:
+        logger.error(f"Error exporting complaints to Excel: {str(e)}")
+        return Response({"error": f"Failed to export complaints: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def print_complaint(request, pk):
     try:
-        complaint = Complaint.objects.get(pk=pk)
+        complaint = Complaint.objects.select_related('customer', 'assign_to').get(pk=pk)
     except Complaint.DoesNotExist:
         return Response({"error": "Complaint not found"}, status=status.HTTP_404_NOT_FOUND)
 
     try:
-        # Prepare data
+        # Prepare data with fallbacks
         context = {
             'company_name': 'Atom Lifts India Pvt Ltd',
             'address': 'No.87B, Pillayar Koll Street, Mannurpet, Ambattur Indus Estate, Chennai 50, CHENNAI',
             'phone': '9600087456',
             'email': 'admin@atomlifts.com',
-            'ticket_no': complaint.reference,
-            'ticket_date': complaint.date.strftime('%d/%m/%Y %H:%M:%S'),
-            'ticket_type': complaint.type,
-            'priority': complaint.priority,
-            'customer_name': complaint.customer.site_name if complaint.customer else '',
-            'site_address': complaint.customer.site_address if complaint.customer and hasattr(complaint.customer, 'site_address') else '',
-            'contact_person': complaint.customer.contact_person_name,
-            'contact_mobile': complaint.customer.phone,
-            'block_wing': complaint.block_wing,
-            'subject': complaint.subject,
-            'message': complaint.message,
-            'assigned_to': complaint.assign_to.name if complaint.assign_to else '',
-            'customer_signature': complaint.customer_signature,
-            'technician_remark': complaint.technician_remark,
-            'technician_signature': complaint.technician_signature,
-            'solution': complaint.solution
+            'ticket_no': complaint.reference or '',
+            'ticket_date': complaint.date.strftime('%d/%m/%Y %H:%M:%S') if complaint.date else '',
+            'ticket_type': complaint.type or '',
+            'priority': complaint.priority or '',
+            'customer_name': getattr(complaint.customer, 'site_name', '') if complaint.customer else '',
+            'site_address': getattr(complaint.customer, 'site_address', '') if complaint.customer else '',
+            'contact_person': getattr(complaint.customer, 'contact_person_name', '') or complaint.contact_person_name or '',
+            'contact_mobile': getattr(complaint.customer, 'phone', '') or complaint.contact_person_mobile or '',
+            'block_wing': complaint.block_wing or '',
+            'subject': complaint.subject or '',
+            'message': complaint.message or '',
+            'assigned_to': getattr(complaint.assign_to, 'username', 'Unassigned') if complaint.assign_to else 'Unassigned',
+            'customer_signature': complaint.customer_signature or '',
+            'technician_remark': complaint.technician_remark or '',
+            'technician_signature': complaint.technician_signature or '',
+            'solution': complaint.solution or ''
         }
 
         # Create PDF buffer
@@ -2026,11 +2037,9 @@ def print_complaint(request, pk):
         story.append(Paragraph(f"Solution: {context['solution']}", styles['Normal']))
         story.append(Spacer(1, 12))
 
-        # Signatures (assuming base64 encoded images; adjust if different)
+        # Signatures
         if context['customer_signature']:
             story.append(Paragraph("Customer Signature", styles['Heading3']))
-            # Note: ReportLab doesn't natively render base64 images easily; you'd need to decode first
-            # For simplicity, we'll just show text placeholder
             story.append(Paragraph("Signature Placeholder", styles['Normal']))
         if context['technician_signature']:
             story.append(Paragraph("Technician Signature", styles['Heading3']))
@@ -2038,17 +2047,21 @@ def print_complaint(request, pk):
 
         # Build PDF
         doc.build(story)
-
-        # Return PDF response
         buffer.seek(0)
-        response = HttpResponse(buffer, content_type='application/pdf')
+
+        response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename=complaint_{context["ticket_no"]}.pdf'
+        buffer.close()
+
         return response
 
     except Exception as e:
         logger.error(f"Unexpected error in print_complaint: {str(e)}")
         return Response({"error": f"Unexpected error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
+
+
+
 
 
     
