@@ -7,6 +7,8 @@ openpyxl
 mysqlclient
 xhtml2pdf
  psycopg2
+qrcode[pil]
+
 
 
 
