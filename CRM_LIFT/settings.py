@@ -224,6 +224,9 @@ EMAIL_SENDER_NAME = "ATOM LIFT"
     #FRONTEND_URL = "http://localhost:5173"
 #else:
 FRONTEND_URL = "https://atom-lift.vercel.app"
+
+SITE_URL = 'https://atom-lift.vercel.app'
+    
     
     
 
