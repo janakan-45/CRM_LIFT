@@ -97,6 +97,9 @@ urlpatterns = [
     path('export-complaints/', views.export_complaints_to_excel, name='export_complaints_to_excel'),
     path('print-complaint/<int:pk>/', views.print_complaint, name='print_complaint'),
 
+    path('complaint-detail/<int:pk>/', views.complaint_detail, name='complaint_detail'),
+    #path('public-complaint/<int:pk>/', views.public_complaint_detail, name='public_complaint_detail'),
+
 
 
 ###################################logins#################################

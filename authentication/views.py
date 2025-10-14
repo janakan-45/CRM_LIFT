@@ -1823,24 +1823,34 @@ def get_employees(request):
     employees = Employee.objects.all()
     serializer = EmployeeSerializer(employees, many=True)
     return Response(serializer.data)
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_complaint(request):
-    serializer = ComplaintSerializer(data=request.data)
+    serializer = ComplaintSerializer(data=request.data, context={'request': request})
     if serializer.is_valid():
-        complaint = serializer.save()
-        return Response({
-            "message": "Complaint added successfully!",
-            "complaint_id": complaint.id
-        }, status=status.HTTP_201_CREATED)
+        complaint = serializer.save()  # don't pass request=request
+        return Response(
+            ComplaintSerializer(complaint, context={'request': request}).data,
+            status=status.HTTP_201_CREATED
+        )
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def complaint_list(request):
+#     complaints = Complaint.objects.all()
+#     serializer = ComplaintSerializer(complaints, many=True)
+#     return Response(serializer.data)
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def complaint_list(request):
-    complaints = Complaint.objects.all()
-    serializer = ComplaintSerializer(complaints, many=True)
-    return Response(serializer.data)
+    complaints = Complaint.objects.all().order_by('-id')
+    serializer = ComplaintSerializer(complaints, many=True, context={'request': request})
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
@@ -1868,6 +1878,29 @@ def delete_complaint(request, pk):
         return Response({"message": "Complaint deleted successfully!"}, status=status.HTTP_200_OK)
     except Complaint.DoesNotExist:
         return Response({"error": "Complaint not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def complaint_detail(request, pk):
+    try:
+        complaint = Complaint.objects.get(pk=pk)
+    except Complaint.DoesNotExist:
+        return Response({"error": "Complaint not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = ComplaintSerializer(complaint, context={'request': request})
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+# @api_view(['GET'])
+# @permission_classes([AllowAny])
+# def public_complaint_detail(request, pk):
+#     try:
+#         complaint = Complaint.objects.get(pk=pk)
+#     except Complaint.DoesNotExist:
+#         return Response({"error": "Complaint not found"}, status=status.HTTP_404_NOT_FOUND)
+
+#     serializer = ComplaintSerializer(complaint, context={'request': request})
+#     return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 from io import BytesIO
 from openpyxl import Workbook

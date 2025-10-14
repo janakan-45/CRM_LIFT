@@ -422,19 +422,26 @@ class ComplaintSerializer(serializers.ModelSerializer):
     assign_to_name = serializers.SerializerMethodField()
     customer = serializers.PrimaryKeyRelatedField(queryset=Customer.objects.all(), write_only=True, required=False)
     customer_name = serializers.SerializerMethodField()
+    qr_code_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Complaint
         fields = ['id', 'reference', 'type', 'date', 'customer_name', 'contact_person_name',
                   'contact_person_mobile', 'block_wing', 'assign_to_name', 'priority',
                   'subject', 'message', 'customer_signature', 'technician_remark',
-                  'technician_signature', 'solution', 'customer', 'assign_to']
+                  'technician_signature', 'solution', 'customer', 'assign_to','qr_code_url']
 
     def get_assign_to_name(self, obj):
         return obj.assign_to.username if obj.assign_to else None
 
     def get_customer_name(self, obj):
         return obj.customer.site_name if obj.customer else None
+    
+    def get_qr_code_url(self, obj):
+        request = self.context.get('request')
+        if obj.qr_code and hasattr(obj.qr_code, 'url'):
+            return request.build_absolute_uri(obj.qr_code.url)
+        return None
     
         
 # accounts/serializers.py

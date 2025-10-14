@@ -241,6 +241,14 @@ class Item(models.Model):
 ###########################complaints########################################
 
 
+import qrcode
+from io import BytesIO
+from django.core.files import File
+from django.contrib.sites.shortcuts import get_current_site
+import logging
+
+logger = logging.getLogger(__name__)
+
 from sales.models import Customer
 class Employee(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -294,15 +302,28 @@ class Complaint(models.Model):
     technician_remark = models.TextField(blank=True)
     technician_signature = models.TextField(blank=True)
     solution = models.TextField(blank=True)
+    qr_code = models.ImageField(upload_to='qr_codes/', blank=True, null=True)
 
     def save(self, *args, **kwargs):
-        if not self.reference:
-            last_complaint = Complaint.objects.all().order_by('id').last()
-            self.reference = f'{self.REFERENCE_PREFIX}{str(1000 + (last_complaint.id + 1) if last_complaint else 1001)}'
-        super().save(*args, **kwargs)
+     kwargs.pop('request', None)
 
-    def __str__(self):
-        return self.reference
+     if not self.reference:
+        last_id = Complaint.objects.order_by('-id').first()
+        new_number = 1 if not last_id else last_id.id + 1
+        self.reference = f"CMP{new_number:05d}"
+
+     super().save(*args, **kwargs)
+
+     if not self.qr_code:
+        base_url = getattr(settings, 'FRONTEND_URL', None) or getattr(settings, 'BASE_URL', 'http://localhost:8000')
+        qr_url = f"{base_url}/complaint/{self.id}/"  # 👈 FRONTEND link instead of backend
+
+        qr = qrcode.make(qr_url)
+        buffer = BytesIO()
+        qr.save(buffer, format='PNG')
+        file_name = f"{self.reference}.png"
+        self.qr_code.save(file_name, File(buffer), save=False)
+        super().save(update_fields=['qr_code'])
 
     
 
